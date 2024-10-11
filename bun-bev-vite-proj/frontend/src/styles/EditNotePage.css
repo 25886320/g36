@@ -1,0 +1,497 @@
+.home-page {
+    min-height: 100vh;
+    display: flex;
+    background: linear-gradient(to top right, var(--white), var(--background-light));
+    position: relative;
+    overflow: hidden;
+  }
+
+  .edit-note-page {
+    display: flex;
+    flex-direction: column;
+    height: 100vh; /* Full viewport height */
+  }
+
+  .note-form {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1; /* Allow note form to grow and fill remaining space */
+    overflow: hidden; /* Prevent overflow */
+  }
+
+  .quill-wrapper {
+    flex-grow: 1; /* Allow Quill to grow and fill remaining space */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Prevent overflow */
+  }
+
+  /* Style for ReactQuill editor */
+.quill {
+    flex-grow: 1; /* Allow Quill to grow and fill remaining space */
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .ql-container {
+    flex-grow: 1; /* Allow Quill container to grow and fill remaining space */
+    overflow: auto; /* Allow scrolling within the editor */
+  }
+  
+  .ql-editor {
+    flex-grow: 1; /* Allow Quill editor to grow and fill remaining space */
+  }
+  
+  .home-page::before {
+    content: '';
+    position: absolute;
+    top: -10%;
+    left: -10%;
+    width: 120%;
+    height: 120%;
+    background: url('path/to/your/diagonal-shape.png') no-repeat;
+    background-size: cover;
+    opacity: 0.1;
+    pointer-events: none;
+  }
+  
+  .sidebar {
+    width: 300px;
+    background-color: var(--white);
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    position: relative;
+    padding-bottom: 4rem; /* Add some padding at the bottom for the signout button */
+  }
+  
+  .search-bar input {
+    width: 100%;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border: 2px solid var(--background-light);
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.3s;
+  }
+  
+  .search-bar input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  
+  .folder-structure {
+    flex-grow: 1;
+    overflow-y: auto;
+    max-height: calc(100% - 8rem); /* Adjust this value as needed */
+  }
+  
+  .folder {
+    margin-bottom: 1rem;
+  }
+  
+  .folder-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(to bottom right, var(--left-grad-blue), var(--right-grad-blue));
+    padding: 0.75rem;
+    border-radius: 8px;
+    color: var(--text-light);
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  
+  .folder-actions {
+    display: flex;
+    align-items: center;
+  }
+  
+  .add-subject-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem;
+    margin-right: 0.5rem;
+    color: var(--text-light);
+    transition: color 0.3s;
+  }
+  
+  .add-subject-button:hover {
+    color: var(--accent);
+  }
+  
+  .folder-toggle {
+    font-size: 0.8rem;
+    transition: transform 0.3s;
+  }
+  
+  .folder-header:hover {
+    background-color: var(--primary-light);
+  }
+  
+  .folder-header:hover .add-subject-button,
+  .folder-header:hover .folder-toggle {
+    color: var(--text-dark);
+  }
+  
+  .folder-header:hover {
+    background-color: var(--primary-light);
+  }
+  
+  .folder-header:hover .add-subject-button,
+  .folder-header:hover .folder-toggle {
+    color: var(--text-dark);
+  }
+  
+  .subjects {
+    margin-left: 1.5rem;
+    margin-top: 0.5rem;
+    transition: max-height 0.3s ease-out;
+  }
+  
+  .folder.expanded .subjects {
+    max-height: 500px; /* Adjust this value based on your needs */
+    transition: max-height 0.5s ease-in;
+  }
+  
+  .subject {
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    border-radius: 4px;
+  }
+  
+  .subject:hover {
+    background-color: var(--primary-light);
+    color: var(--text-dark);
+  }
+  
+  .add-subject {
+    display: flex;
+    align-items: center;
+    color: var(--accent);
+    font-weight: 500;
+  }
+  
+  .add-subject svg {
+    margin-right: 0.5rem;
+  }
+  
+  .add-subject:hover {
+    background-color: var(--accent);
+    color: var(--white);
+  }
+  
+  .create-btn {
+    margin-top: 1.5rem;
+    padding: 0.75rem;
+    background-color: var(--accent);
+    color: var(--white);
+    border: none;
+    border-radius: 8px;
+    background: var(--accent);
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.3s, box-shadow 0.3s;
+  }
+  
+  .create-btn:hover {
+    background-color: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  }
+  
+  .main-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 2rem;
+    overflow-y: auto;
+  }
+  
+  .top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    height: 44px; /* Set a fixed height for the container */
+  }
+  
+  .current-view-title {
+    font-size: 2rem;
+    color: var(--text-dark);
+    font-weight: bold;
+    margin: 0;
+  }
+  
+  .top-bar-right {
+    display: flex;
+    align-items: center;
+    height: 44px; /* Set a fixed height for the container */
+  }
+  
+  .all-notes {
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    font-weight: bold;
+    color: var(--accent);
+  }
+  
+  .all-notes:hover {
+    background-color: var(--accent);
+    color: var(--white);
+  }
+  
+  .search-container {
+    display: flex;
+    align-items: center;
+    background-color: var(--search-bg);
+    border-radius: 10px;
+    padding: 0.5rem;
+    transition: box-shadow 0.3s ease;
+    width: 100%;
+    max-width: 400px;
+    margin-right: 1rem;
+    height: 100%; /* Make it fill the height of its container */
+  }
+  
+  .search-input {
+    border: none;
+    outline: none;
+    padding: 0.5rem;
+    font-size: 1rem;
+    width: 100%;
+    background: transparent;
+    flex-grow: 1;
+    height: 100%; /* Make it fill the height of its container */
+  }
+  
+  .search-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    color: var(--primary-dark);
+    flex-shrink: 0;
+    height: 100%; /* Make it fill the height of its container */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .add-note-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--accent);
+    color: var(--white);
+    border: none;
+    border-radius: 8px;
+    background: var(--accent);
+    padding: 0 1rem;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.3s, box-shadow 0.3s;
+    white-space: nowrap;
+    flex-shrink: 0;
+    height: 100%; /* Make it fill the height of its container */
+  
+  }
+  
+  .add-note-button:hover {
+    background-color: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  }
+  
+  .add-note-button svg {
+    margin-right: 0.5rem;
+  }
+  
+  .notes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1.5rem;
+  }
+  
+  .note-card {
+    background-color: var(--white);
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s, box-shadow 0.3s;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Ensure the card takes full height of its grid cell */
+  }
+  
+  .note-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  .note-thumbnail {
+    height: 100px;
+    background-color: var(--background-light);
+    margin-bottom: 0.75rem;
+    border-radius: 4px;
+  }
+  
+  .note-title {
+    margin: 0 0 0.5rem 0;
+    color: var(--text-dark);
+    font-weight: bold;
+  }
+  
+  .note-date {
+    font-size: 0.8rem;
+    color: #4a4a4a; /* Changed to a dark grey color */
+    margin: 0 0 0.75rem 0;
+  }
+  
+  .note-content {
+    flex-grow: 1; /* Allow content to grow and push actions to bottom */
+  }
+  
+  .note-actions {
+    position: absolute;
+    bottom: 0.5rem;
+    right: 0.5rem;
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .icon-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 50%;
+    transition: background-color 0.3s, color 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--icon-grey); /* Set the default color to grey */
+  }
+  
+  .icon-button svg {
+    width: 1rem;
+    height: 1rem;
+  }
+  
+  .edit-btn, .delete-btn {
+    color: var(--icon-grey); /* Ensure both buttons use the grey color */
+  }
+  
+  /* Optional: If you want a slightly darker grey on hover */
+  .icon-button:hover {
+    color: #606060; /* Darker grey on hover, adjust as needed */
+    background-color: rgba(0, 0, 0, 0.05); /* Subtle background change on hover */
+  }
+  
+  .edit-btn:hover, .delete-btn:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+  }
+  
+  @media (max-width: 768px) {
+    .home-page {
+      flex-direction: column;
+    }
+  
+    .sidebar {
+      width: 100%;
+      height: auto;
+    }
+  
+    .main-content {
+      height: 60vh;
+    }
+  }
+  
+  .sidebar .search-container {
+      display: flex;
+      align-items: center;
+      background-color: transparent;
+      border-radius: 8px;
+      border: 2px solid var(--background-light);
+      margin-bottom: 1.5rem;
+      transition: border-color 0.3s;
+      height: 44px; /* Increase height slightly to accommodate text */
+      overflow: hidden;
+  }
+  
+  .sidebar .search-container:focus-within {
+    border-color: var(--accent);
+  }
+  
+  .sidebar .search-input {
+      flex-grow: 1;
+      border: none;
+      outline: none;
+      padding: 0 0.5rem; /* Remove top and bottom padding */
+      font-size: 1rem;
+      background: transparent;
+      height: 100%;
+      color: inherit;
+      line-height: 40px; /* Match the height of the container */
+  }
+  
+  .sidebar .search-button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0 0.5rem;
+      color: var(--primary-dark);
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+  }
+  
+  .main-content .search-container {
+    display: flex;
+    align-items: center;
+    background-color: var(--white);
+    border-radius: 8px;
+    padding: 0.5rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2), 0 2px 5px rgba(0, 0, 0, 0.15);
+  }
+  
+  .signout-btn {
+    position: absolute;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+    color: var(--text-dark);
+    border: 2px solid var(--accent);
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s, transform 0.3s, box-shadow 0.3s;
+    width: calc(100% - 4rem); /* Subtracting 4rem to account for left and right padding */
+    max-width: 300px; /* Adjust this value if needed */
+  }
+  
+  .signout-btn svg {
+    margin-right: 0.5rem;
+  }
+  
+  .signout-btn:hover {
+    background-color: var(--accent);
+    color: var(--white);
+    transform: translateX(-50%) translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  }
