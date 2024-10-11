@@ -1,0 +1,40 @@
+CREATE TABLE user_notes (
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  note_id UUID REFERENCES notes(id) ON DELETE CASCADE,
+  role VARCHAR(50),
+  PRIMARY KEY(user_id, note_id)
+);
+
+
+CREATE POLICY "Enable update for users based on email in user_notes"
+ON "public"."user_notes"
+AS PERMISSIVE
+FOR UPDATE
+TO authenticated
+USING (
+  (auth.jwt() ->> 'email') = (SELECT email FROM users WHERE users.id = user_notes.user_id)
+)
+WITH CHECK (
+  (auth.jwt() ->> 'email') = (SELECT email FROM users WHERE users.id = user_notes.user_id)
+);
+
+
+create table
+  public.notes (
+    id serial not null,
+    title character varying(255) null default 'My Note'::character varying,
+    content text not null default ':)'::text,
+    owner_id uuid null,
+    created_at timestamp without time zone null default current_timestamp,
+    updated_at timestamp without time zone null default current_timestamp,
+    owner_id_uuid uuid null,
+    constraint notes_pkey primary key (id),
+    constraint notes_owner_id_fkey foreign key (owner_id) references users (id) on delete cascade
+  ) tablespace pg_default;
+
+
+
+UPDATE notes 
+SET owner_id_uuid = (
+  SELECT id FROM users WHERE users.id = notes.owner_id
+);
