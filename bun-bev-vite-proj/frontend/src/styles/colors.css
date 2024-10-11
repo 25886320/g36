@@ -1,0 +1,17 @@
+:root {
+  --primary-light: #eaf9ff;
+  --primary-dark: #2a4052;
+  --text-dark: #000500;
+  --text-light: #E8F7EE;
+  --white: #ffffff;
+  --background-light: #ededed;
+  --accent: #637c99;
+  --second-blue: #637c996c;
+  --left-grad-blue: #9bc5d3;
+  --right-grad-blue: #7eafc0;
+  --icon-grey: #808080;
+  --light-gray: #f0f0f0;
+  --gray: #5d5d5d;
+  --light-blue: #3b82f6;
+
+}
