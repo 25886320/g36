@@ -74,21 +74,58 @@ const acceptInvite = async (req, res) => {
   const userId = req.user.id;
 
   try {
-    const result = await pool.query(
+    const noteResult = await pool.query(
+      `SELECT n.id, n.title, n.subject_id, n.folder_id, 
+              s.name AS subject_name, f.name AS folder_name
+       FROM notes AS n
+       LEFT JOIN subjects AS s ON n.subject_id = s.id
+       LEFT JOIN folders AS f ON n.folder_id = f.id
+       WHERE n.id = $1`, [noteId]
+    );
+
+    if (noteResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Note not found' });
+    }
+
+    const { title, subject_name, folder_name, content } = noteResult.rows[0];
+
+    const createdAt = new Date().toISOString();
+
+    // Create new folder for the user
+    const newFolderResult = await pool.query(
+      `INSERT INTO folders (name, owner_id, created_at) VALUES ($1, $2, $3) RETURNING id`,
+      [folder_name, userId, createdAt]
+    );
+
+    const newFolderId = newFolderResult.rows[0].id;
+
+    // Create new subject for the user
+    const newSubjectResult = await pool.query(
+      `INSERT INTO subjects (name, folder_id, created_at) VALUES ($1, $2, $3) RETURNING id`,
+      [subject_name, newFolderId, createdAt]
+    );
+
+    const newSubjectId = newSubjectResult.rows[0].id;
+
+    // Link the note to the new subject
+    await pool.query(
+      `INSERT INTO notes (title, content, owner_id, created_at, subject_id, folder_id) 
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [title, content, userId, createdAt, newSubjectId, newFolderId]
+    );
+
+    // Mark the invite as accepted
+    await pool.query(
       `UPDATE user_notes 
        SET answered_invite = true 
        WHERE user_id = $1 AND note_id = $2`,
       [userId, noteId]
     );
 
-    if (result.rowCount === 0) {
-      return res.status(404).json({ message: 'Invite not found' });
-    }
-
     res.status(200).json({ message: 'Invite accepted successfully' });
   } catch (error) {
     console.error('Error accepting invite:', error);
-    res.status(500).json({ message: 'Error accepting invite' });
+    res.status(500).json({ message: 'Error accepting invite', error: error.message });
   }
 };
 

@@ -3,9 +3,11 @@ import { FaLock, FaEnvelope } from 'react-icons/fa';
 import { Link, useNavigate } from 'react-router-dom';
 import '../styles/AuthPage.css';
 import api from '../services/api';
+import { Checkbox } from 'primereact/checkbox';
+import { ProgressSpinner } from 'primereact/progressspinner';
 
 interface LoginPageProps {
-  login: (token: string) => void;
+  login: (token: string, rememberMe: boolean) => void;
 }
 
 const LoginPage: React.FC<LoginPageProps & { showToast: (severity: 'success' | 'info' | 'warn' | 'error' | 'secondary' | 'contrast' | undefined, summary: string, detail: string) => void }> = ({ login, showToast }) => {
@@ -13,33 +15,35 @@ const LoginPage: React.FC<LoginPageProps & { showToast: (severity: 'success' | '
   const [password, setPassword] = useState('');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    setLoading(true);
     try {
       // Call API to log in the user
-      const response = await api.login({ email, password });
+      const response = await api.login({ email, password, rememberMe });
       console.log('Login successful!');
-      //alert('Login successful!');
 
-      // Store the JWT token in localStorage
       const { token } = response.data;
-      login(token);
+      login(token, rememberMe);
 
       // Redirect to home page
       navigate('/home');
     } catch (error: unknown) {
       console.error('Error logging in: ', error);
-      // alert('Login failed. Please check your credentials.');
-      // showToast('error', 'Login Failed', 'Please check your credentials.');
+
       const err = error as { response?: { status: number, data: { message: string } } };
       if (err.response && err.response.status === 400) {
         showToast('error', 'Login Failed', err.response.data.message);
       } else {
         showToast('error', 'Login Failed', 'Please check your credentials.');
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -81,17 +85,34 @@ const LoginPage: React.FC<LoginPageProps & { showToast: (severity: 'success' | '
                   className="input-field"
                 />
               </div>
-              <div className="forgot-password-container">
+
+              <div className="flex justify-between items-center mb-12 -mt-2">
+                {/* Remember me checkbox */}
+                <div className="flex items-center">
+                  <Checkbox inputId="rememberMe" className="p-checkbox ml-1" checked={rememberMe} onChange={(e) => setRememberMe(e.checked ?? false)} />
+                  <label className="ml-2 text-base text-black">Remember me</label>
+                </div>
+                  
                 <button
                   type="button"
-                  className="link-button forgot-password-link"
+                  className="link-button forgot-password-link text-base mr-1"
                   onClick={() => setShowForgotPassword(true)}
                 >
                   Forgot password?
                 </button>
               </div>
-              <button type="submit" className="auth-button">
-                LOGIN
+
+              {/* Login Button with ProgressSpinner */}
+              <button type="submit" className="auth-button" disabled={loading}>
+                {loading ? (
+                  <ProgressSpinner
+                    style={{ width: '20px', height: '20px' }}
+                    strokeWidth="5"
+                    animationDuration="2s"
+                  />
+                ) : (
+                  'LOGIN'
+                )}
               </button>
             </form>
             <div className="option-section">

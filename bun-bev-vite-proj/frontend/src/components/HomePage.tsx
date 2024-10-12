@@ -8,7 +8,7 @@ import { Menu } from 'primereact/menu';
 import { Dialog } from 'primereact/dialog';
 import { Badge } from 'primereact/badge';
 import { Button } from 'primereact/button';
-
+import { Skeleton } from 'primereact/skeleton';
 
 interface HomePageProps {
   logout: () => void;
@@ -371,7 +371,7 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
   const [currentNoteIndex, setCurrentNoteIndex] = useState<number>(0);
   const [isInboxPopupOpen, setIsInboxPopupOpen] = useState<boolean>(false);
   const [showColorPicker, setShowColorPicker] = useState<string | null>(null);
-
+  const [loading, setLoading] = useState(true);
 
 
   const colors = [
@@ -417,7 +417,7 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
         )
       );
       setEditingFolderId(null);
-      showToast('success', 'Success', 'Folder name updated successfully');
+      showToast('info', 'Folder Name Updated', 'Folder name updated successfully');
     } catch (error) {
       console.error('Error editing folder:', error);
       if (error instanceof Error && 'response' in error) {
@@ -454,7 +454,7 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
           note.id === noteId ? { ...note, color } : note
         )
       );
-      showToast('info', 'Success', 'Note color updated successfully');
+      showToast('info', 'Updated Note Color', 'Note color updated successfully');
       setShowColorPicker(null);
     } catch (error) {
       console.error('Error updating note color:', error);
@@ -488,7 +488,7 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
       try {
         await api.deleteFolder(deleteCategoryConfirmation.folderId);
         setFolders(prevFolders => prevFolders.filter(folder => folder.id !== deleteCategoryConfirmation.folderId));
-        showToast('success', 'Success', 'Category deleted successfully');
+        showToast('info', 'Category Deleted', 'Category deleted successfully');
       } catch (err) {
         console.error('Error deleting category:', err);
         showToast('error', 'Error', 'Failed to delete category. Please try again.');
@@ -507,7 +507,7 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
             subjects: folder.subjects.filter(subject => subject.id !== deleteSubjectConfirmation.subjectId)
           }))
         );
-        showToast('success', 'Success', 'Subject deleted successfully');
+        showToast('info', 'Deleted Subject', 'Subject deleted successfully');
       } catch (err) {
         console.error('Error deleting subject:', err);
         showToast('error', 'Error', 'Failed to delete subject. Please try again.');
@@ -569,18 +569,54 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
   };
 
   const handleAcceptNote = async () => {
-    const noteId = sharedNotes[currentNoteIndex].note_id;
+    const noteId = sharedNotes[currentNoteIndex]?.note_id;
 
     if (!noteId) {
       showToast('error', 'Error', 'No note selected to accept.');
-      return; // Exit if noteId is undefined
+      return;
     }
 
     try {
-      await api.acceptInvite({ noteId });
+      const response = await api.acceptInvite({ noteId });
+
+        const newNote = {
+          id: response.data.note_id,
+          title: response.data.title,
+          content: response.data.content,
+          subjectId: response.data.subject_id,
+          folderId: response.data.folder_id,
+          ownerId: response.data.owner_id,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          color: response.data.color || '#637c99'
+
+      };
+
+      setFolders(prevFolders => {
+          return prevFolders.map(folder => {
+              if (folder.id === newNote.folderId) {
+                  return {
+                      ...folder,
+                      subjects: folder.subjects.map(subject => {
+                          if (subject.id === newNote.subjectId) {
+                              return {
+                                  ...subject,
+                                  notes: [...subject.notes, newNote],
+                              };
+                          }
+                          return subject;
+                      }),
+                  };
+              }
+              return folder;
+          });
+      });
+
       showToast('success', 'Note Accepted', 'The shared note has been added to your notes.');
       removeCurrentNote();
+      await fetchFoldersAndSubjects;
       await fetchNotes();
+
     } catch (error) {
       console.error('Error accepting note:', error);
       showToast('error', 'Error', 'Failed to accept the note. Please try again.');
@@ -594,7 +630,7 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
 
     if (!noteId) {
       showToast('error', 'Error', 'No note selected to accept.');
-      return; // Exit if noteId is undefined
+      return;
     }
 
     try {
@@ -721,11 +757,12 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
 
       setUsername(response.data.username);
       setProfileImageUrl(response.data.profile_image_url || null);
-
+      setLoading(false);
       console.log('User data:', response.data);
     } catch (err) {
       console.error('Error fetching user data:', err);
       setError('Failed to load user data');
+      setLoading(false);
       showToast('error', 'Error', 'Failed to load user data');
     }
   };
@@ -898,10 +935,10 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
         });
 
         setIsNewSubjectPopupOpen(false);
-        showToast('success', 'Success', 'Subject created successfully');
+        showToast('info', 'Success', 'Subject created successfully');
         
         // Refresh folders and subjects
-        await fetchFoldersAndSubjects();
+        //await fetchFoldersAndSubjects();
       } catch (error) {
         console.error('Error creating subject:', error);
         if (error instanceof Error && 'response' in error) {
@@ -919,7 +956,7 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
         showToast('error', 'Error', 'Failed to create subject. Please try again.');
       }
     }
-  }, [selectedFolderId, showToast, fetchFoldersAndSubjects]);
+  }, [selectedFolderId, showToast]);
 
   const sortNotes = (notesToSort: Note[]): Note[] => {
     return notesToSort.sort((a, b) => {
@@ -1008,7 +1045,7 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
         )
       );
       setEditingNoteId(null);
-      showToast('success', 'Success', 'Note title updated successfully');
+      showToast('info', 'Success', 'Note title updated successfully');
     } catch (error) {
       console.error('Error editing note:', error);
       showToast('error', 'Error', 'Failed to update note title. Please try again.');
@@ -1031,7 +1068,7 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
       }))
     );
     setEditingSubjectId(null);
-    showToast('success', 'Success', 'Subject name updated successfully');
+    showToast('info', 'Success', 'Subject name updated');
   } catch (error) {
     console.error('Error editing subject:', error);
     showToast('error', 'Error', 'Failed to update subject name. Please try again.');
@@ -1041,7 +1078,7 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
   const handleNoteShare = useCallback(async (noteId: string, email: string, isEditor: boolean) => {
     try {
       await api.shareNote(noteId, email, isEditor);
-      showToast('success', 'Success', 'Note shared successfully');
+      showToast('info', 'Success', 'Note shared successfully');
       setIsSharingNotePopupOpen(false);
     } catch (error) {
       console.error('Error sharing note:', error);
@@ -1067,6 +1104,7 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
         };
         
         setFolders(prevFolders => [...prevFolders, newFolder]);
+        showToast('success', 'Success', 'Category created successfully');
         fetchFoldersAndSubjects();
       } catch (err) {
         console.error('Error creating category:', err);
@@ -1075,7 +1113,7 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
       }
     }
     setIsNewCategoryPopupOpen(false)
-  }, [fetchFoldersAndSubjects, showToast]); 
+  }, [folders, showToast, fetchFoldersAndSubjects]); 
 
   const handleNewNoteSubmit = useCallback(async (title: string, folderName: string, subjectName: string) => {
     
@@ -1148,9 +1186,10 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
     if (file) {
       try {
         const imageUrl = await api.uploadProfileImage(file);
-        await api.updateProfileImage(imageUrl);
         setProfileImageUrl(imageUrl);
-        showToast('success', 'Success', 'Profile image updated successfully');
+        //TODO implement in api:
+        //await api.updateProfileImage(imageUrl);
+        showToast('info', 'Profile Image updated', 'Profile image updated successfully');
       } catch (error) {
         console.error('Error updating profile image:', error);
         showToast('error', 'Error', 'Failed to update profile image');
@@ -1170,15 +1209,22 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
       <div className="sidebar">
         <div className="user-info flex items-center mb-8 relative">
           <div className="relative">
-            <Avatar 
-              image={profileImageUrl || undefined}
-              icon={!profileImageUrl ? "pi pi-user" : undefined}
-              className="shadow-sm transform transition-transform hover:scale-110 active:scale-100 cursor-pointer"
-              size="large" 
-              shape="circle" 
-              onClick={(e) => menu.current?.toggle(e)} 
-            />
-            {inboxCount > 0 && (
+
+            {loading ? (
+              // Show skeleton for avatar while loading
+              <Skeleton shape="circle" size="3rem" />
+            ) : (
+              <Avatar 
+                image={profileImageUrl || undefined}
+                icon={!profileImageUrl ? "pi pi-user" : undefined}
+                className="shadow-sm transform transition-transform hover:scale-110 active:scale-100 cursor-pointer"
+                size="large" 
+                shape="circle" 
+                onClick={(e) => menu.current?.toggle(e)} 
+              />
+            )}
+
+            {inboxCount > 0 && !loading && (
               <Badge 
                 value={inboxCount} 
                 severity="danger" 
@@ -1186,12 +1232,17 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
               ></Badge>
             )}
           </div>
-          <span 
-            className="username ml-3 font-medium text-lg transform transition-transform hover:scale-110 active:scale-100 cursor-pointer" 
-            onClick={(e) => menu.current?.toggle(e)}
-          >
-            {username}
-          </span>
+          {loading ? (
+          // Show skeleton for username while loading
+            <Skeleton width="4rem" className="ml-3" />
+          ) : (
+            <span
+              className="username ml-3 font-medium text-lg transform transition-transform hover:scale-110 active:scale-100 cursor-pointer"
+              onClick={(e) => menu.current?.toggle(e)}
+            >
+              {username}
+            </span>
+          )}
           <Menu 
             model={menuItems} 
             popup 
@@ -1219,81 +1270,92 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
             setSelectedFolder(null);
             setSelectedSubject(null);
           }}>All Notes</div>
-          {folders.map((folder) => (
-            <div key={folder.id} className="folder">
-              <div
-                className={`folder-header ${selectedFolder?.id === folder.id ? 'selected' : ''}`}
-                onClick={() => toggleFolder(folder.id)}
-              >
-                {editingFolderId === folder.id ? (
-                  <input
-                    type="text"
-                    defaultValue={folder.name}
-                    onBlur={(e) => handleSaveFolderEdit(folder.id, e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        handleSaveFolderEdit(folder.id, e.currentTarget.value);
-                      }
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                    autoFocus
-                  />
-                ) : (
-                  <span>{folder.name}</span>
-                )}
-                <div className="folder-actions">
-                  <button 
-                    className="folder-options-btn"
-                    onClick={(e) => handleFolderOptions(e, folder.id)}
-                  >
-                    <FaEllipsisV />
-                  </button>
-                  <span className="folder-toggle">
-                    {expandedFolders.includes(folder.id) ? '▼' : '▶'}
-                  </span>
-                </div>
-              </div>
-              {selectedFolder?.id === folder.id && (
-               <div className="subjects-container">
-                  <div
-                    className="subject add-subject flex items-center px-3 py-2 hover:bg-blue-500 hover:text-white transition-colors duration-300 cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleAddSubject(folder.id);
-                    }}
-                  >
-                    <FaPlus className="mr-2 text-sm" /> <span>Add Subject</span>
+          {loading ? (
+            // Show skeleton placeholders while loading
+            <>
+              <Skeleton height="3rem" className="mb-4" borderRadius="8px" />
+              <Skeleton height="3rem" className="mb-4" borderRadius="8px" />
+              <Skeleton height="3rem" className="mb-4" borderRadius="8px" />
+              <Skeleton height="3rem" className="mb-4" borderRadius="8px" />
+            </>
+          ) : (
+            folders.map((folder) => (
+              <div key={folder.id} className="folder">
+                <div
+                  className={`folder-header ${selectedFolder?.id === folder.id ? 'selected' : ''}`}
+                  onClick={() => toggleFolder(folder.id)}
+                >
+                  {editingFolderId === folder.id ? (
+                    <input
+                      type="text"
+                      defaultValue={folder.name}
+                      onBlur={(e) => handleSaveFolderEdit(folder.id, e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          handleSaveFolderEdit(folder.id, e.currentTarget.value);
+                        }
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      autoFocus
+                    />
+                  ) : (
+                    <span>{folder.name}</span>
+                  )}
+                  <div className="folder-actions">
+                    <button
+                      className="folder-options-btn"
+                      onClick={(e) => handleFolderOptions(e, folder.id)}
+                    >
+                      <FaEllipsisV />
+                    </button>
+                    <span className="folder-toggle">
+                      {expandedFolders.includes(folder.id) ? '▼' : '▶'}
+                    </span>
                   </div>
+                </div>
+                {selectedFolder?.id === folder.id && (
+                  <div className="subjects-container">
+                    <div
+                      className="subject add-subject flex items-center px-3 py-2 hover:bg-blue-500 hover:text-white transition-colors duration-300 cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAddSubject(folder.id);
+                      }}
+                    >
+                      <FaPlus className="mr-2 text-sm" /> <span>Add Subject</span>
+                    </div>
 
-                  <div className="subjects-scroll">
-                    {folder.subjects.map((subject) => (
-                      <div
-                        key={subject.id}
-                        className={`subject ${selectedSubject?.id === subject.id ? 'selected' : ''}`}
-                      >
-                        {editingSubjectId === subject.id ? (
-                          <input
-                            type="text"
-                            defaultValue={subject.name}
-                            onBlur={(e) => handleSaveSubjectEdit(subject.id, e.target.value)}
-                            onKeyPress={(e) => {
-                              if (e.key === 'Enter') {
-                                handleSaveSubjectEdit(subject.id, e.currentTarget.value);
-                              }
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                            autoFocus
-                          />
-                        ) : (
-                          <span>{subject.name}</span>
-                        )}
-                      </div>
-                    ))}
+                    <div className="subjects-scroll">
+                      {folder.subjects.map((subject) => (
+                        <div
+                          key={subject.id}
+                          className={`subject ${selectedSubject?.id === subject.id ? 'selected' : ''}`}
+                        >
+                          {editingSubjectId === subject.id ? (
+                            <input
+                              type="text"
+                              defaultValue={subject.name}
+                              onBlur={(e) => handleSaveSubjectEdit(subject.id, e.target.value)}
+                              onKeyPress={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleSaveSubjectEdit(subject.id, e.currentTarget.value);
+                                }
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              autoFocus
+                            />
+                          ) : (
+                            <span>{subject.name}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          ))}
+                )}
+              </div>
+            ))
+          )}
+          
         </div>
         <button className="signout-btn" onClick={handleCreateFolder}>Create Category</button>
       </div>
@@ -1321,98 +1383,129 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
         
         {currentView === 'all' && (
           <div className="notes-grid">
-          {getCurrentNotes().map((note) => (
-            <div key={note.id} className="note-card" onClick={() => handleNoteClick(note)}>
-              <div 
-                className="note-thumbnail"
-                style={{
-                  '--note-color-light': `${note.color}33`,
-                  '--note-color-dark': `${note.color}cc`
-                } as React.CSSProperties}
-              >
-                <div className="note-preview">
+            {loading ? (
+              // Show skeleton placeholders while loading notes
+              <>
+                <div className="note-card">
+                  <Skeleton shape="rectangle" height="120px" className="mb-5" />
+                  <Skeleton width="60%" className="mb-2" />
+                  <Skeleton width="40%" className="mb-2" />
+                  <Skeleton width="80%" className="mb-2" />
                 </div>
-              </div>
-              <div className="note-content">
-                {editingNoteId === note.id ? (
-                  <input
-                    type="text"
-                    defaultValue={note.title}
-                    onBlur={(e) => handleSaveEdit(note.id, e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        handleSaveEdit(note.id, e.currentTarget.value);
-                      }
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                    autoFocus
-                  />
-                ) : (
-                  <h3 className="note-title">{note.title}</h3>
-                )}
-                <p className="note-category">{note.folderName}: {note.subjectName}</p>
-                <p className="note-date">Last Edited: {formatDate(note.updatedAt)}</p>
-              </div>
-              <div className="note-actions">
-                <button
-                  className={`icon-button color-btn ${showColorPicker === note.id ? 'active' : ''}`}
-                  aria-label="Change note color"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowColorPicker(prevState => prevState === note.id ? null : note.id);
-                  }}
-                >
-                  <FaPalette />
-                </button>
-                {showColorPicker === note.id && (
-                  <div className="color-picker-tooltip">
-                    {colors.map((color, index) => (
-                      <button
-                        key={index}
-                        className="color-option"
-                        style={{ backgroundColor: color }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleColorChange(note.id, color);
-                        }}
-                      />
-                    ))}
+                <div className="note-card">
+                  <Skeleton shape="rectangle" height="120px" className="mb-5" />
+                  <Skeleton width="60%" className="mb-2" />
+                  <Skeleton width="40%" className="mb-2" />
+                  <Skeleton width="80%" className="mb-2" />
+                </div>
+                <div className="note-card">
+                  <Skeleton shape="rectangle" height="120px" className="mb-5" />
+                  <Skeleton width="60%" className="mb-2" />
+                  <Skeleton width="40%" className="mb-2" />
+                  <Skeleton width="80%" className="mb-2" />
+                </div>
+                <div className="note-card">
+                  <Skeleton shape="rectangle" height="120px" className="mb-5" />
+                  <Skeleton width="60%" className="mb-2" />
+                  <Skeleton width="40%" className="mb-2" />
+                  <Skeleton width="80%" className="mb-2" />
+                </div>
+              </>
+            ) : (
+              getCurrentNotes().map((note) => (
+                <div key={note.id} className="note-card" onClick={() => handleNoteClick(note)}>
+                  <div 
+                    className="note-thumbnail"
+                    style={{
+                      '--note-color-light': `${note.color}33`,
+                      '--note-color-dark': `${note.color}cc`
+                    } as React.CSSProperties}
+                  >
+                    <div className="note-preview">
+                    </div>
                   </div>
-                )}
-                <button
-                  className="icon-button edit-btn"
-                  aria-label="Edit note"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleEditNote(note.id);
-                  }}
-                >
-                  <FaEdit />
-                </button>
-                <button
-                  className="icon-button delete-btn"
-                  aria-label="Delete note"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteNote(note.id);
-                  }}
-                >
-                  <FaTrash />
-                </button>
-                <button
-                  className="icon-button share-btn"
-                  aria-label="Share note"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleShare(note.id);
-                  }}
-                >
-                  <FaShare />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+                  <div className="note-content">
+                    {editingNoteId === note.id ? (
+                      <input
+                        type="text"
+                        defaultValue={note.title}
+                        onBlur={(e) => handleSaveEdit(note.id, e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            handleSaveEdit(note.id, e.currentTarget.value);
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        autoFocus
+                      />
+                    ) : (
+                      <h3 className="note-title">{note.title}</h3>
+                    )}
+                    <p className="note-category">{note.folderName}: {note.subjectName}</p>
+                    <p className="note-date">Last Edited: {formatDate(note.updatedAt)}</p>
+                  </div>
+                  <div className="note-actions">
+                    <button
+                      className={`icon-button color-btn ${showColorPicker === note.id ? 'active' : ''}`}
+                      aria-label="Change note color"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowColorPicker(prevState => prevState === note.id ? null : note.id);
+                      }}
+                    >
+                      <FaPalette />
+                    </button>
+                    {showColorPicker === note.id && (
+                      <div className="color-picker-tooltip">
+                        {colors.map((color, index) => (
+                          <button
+                            key={index}
+                            className="color-option"
+                            style={{ backgroundColor: color }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleColorChange(note.id, color);
+                            }}
+                          />
+                        ))}
+                      </div>
+                    )}
+                    <button
+                      className="icon-button edit-btn"
+                      aria-label="Edit note"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditNote(note.id);
+                      }}
+                    >
+                      <FaEdit />
+                    </button>
+                    <button
+                      className="icon-button delete-btn"
+                      aria-label="Delete note"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteNote(note.id);
+                      }}
+                    >
+                      <FaTrash />
+                    </button>
+                    <button
+                      className="icon-button share-btn"
+                      aria-label="Share note"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleShare(note.id);
+                      }}
+                    >
+                      <FaShare />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
         )}
 
         {currentView === 'folder' && selectedFolder && (

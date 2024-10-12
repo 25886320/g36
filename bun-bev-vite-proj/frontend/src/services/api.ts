@@ -10,7 +10,7 @@ const apiClient = axios.create({
 
 // Request interceptor to attach the auth token to headers
 apiClient.interceptors.request.use((config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
@@ -27,6 +27,7 @@ interface RegisterData {
 interface LoginData {
     email: string;
     password: string;
+    rememberMe: boolean;
 }
 
 interface NoteData {
@@ -47,10 +48,10 @@ interface CreateSubjectData {
     folder_id: string;
 }
 
-interface EditFolderData {
-    name: string;
-    content?: string;
-}
+// interface EditFolderData {
+//     name: string;
+//     content?: string;
+// }
 
 interface EditSubjectData {
     name: string;
@@ -132,10 +133,10 @@ const api = {
             }
         }
     },
-    updateProfileImage: async (imageUrl: string) => {
-        //TODO: Implement this function to set the string in the user document
+    // updateProfileImage: async (imageUrl: string) => {
+    //     //TODO: Implement this function to set the string in the user document
         
-    },
+    // },
 };
 
 export default api;

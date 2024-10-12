@@ -60,7 +60,7 @@ const registerUser = async (req, res) => {
 
 // Login an existing user
 const loginUser = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, rememberMe } = req.body;
 
   try {
     // Check if user exists
@@ -81,7 +81,12 @@ const loginUser = async (req, res) => {
     const userId = user.id;
 
     // Generate JWT
-    const token = jwt.sign({ userId: userId }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    let token;
+    if (rememberMe) {
+      token = jwt.sign({ userId: userId }, process.env.JWT_SECRET, { expiresIn: '30d' });
+    } else {
+      token = jwt.sign({ userId: userId }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    }
 
     res.json({ token });
   } catch (err) {

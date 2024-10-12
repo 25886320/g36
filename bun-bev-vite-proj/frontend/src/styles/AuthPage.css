@@ -126,15 +126,17 @@
   .option-link:hover {
     color: var(--primary-dark);
   }
-  
-  /* Forgot Password Styles */
-  .forgot-password-container {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 0.5rem;
-    margin-bottom: 1rem;
+
+  .p-checkbox .p-checkbox-box {
+    border: 1px solid var(--background-light);
+    border-radius: 5px;
+  }
+
+  .p-progress-spinner circle {
+    stroke: var(--background-light) !important;
   }
   
+  /* Forgot Password Styles */
   .forgot-password-form {
     text-align: center;
   }
