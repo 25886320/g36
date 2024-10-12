@@ -40,6 +40,17 @@ This is a collaborative note-taking web application designed to allow users to c
 
 - `.env` file in backend/. See README in backend directory.
 
+- `.env` file in the frontend/ directory:
+
+```markdown
+VITE_FIREBASE_API_KEY=<vite-firebase-api-key>
+VITE_FIREBASE_AUTH_DOMAIN=<vite-firebase-auth-domain>
+VITE_FIREBASE_PROJECT_ID=<vite-firbase-project-id>
+VITE_FIREBASE_STORAGE_BUCKET=<vite-firebase-storage-bucket>
+VITE_FIREBASE_MESSAGING_SENDER_ID=<vite-firebase-messageing-sender-id>
+VITE_FIREBASE_APP_ID=<vite-firebase-app-id>
+```
+
 ### 1. Install Dependencies:
 
 - Run this command in the root directory (`bun-bev-vite-proj/`) to install all dependencies for both frontend and backend:

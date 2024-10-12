@@ -133,9 +133,14 @@ const api = {
             }
         }
     },
+    // TODO: Implement these functions
     // updateProfileImage: async (imageUrl: string) => {
     //     //TODO: Implement this function to set the string in the user document
         
+    // },
+    // updateUsername: (username: string) => {
+    // },
+    // updateEmail: (email: string) => {
     // },
 };
 

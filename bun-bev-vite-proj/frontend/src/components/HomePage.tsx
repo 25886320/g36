@@ -360,6 +360,8 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
   const [deleteConfirmation, setDeleteConfirmation] = useState<{ isOpen: boolean; noteId: string | null }>({ isOpen: false, noteId: null });  
   const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
   const [username, setUsername] = useState<string>('User');
+  const [email, setEmail] = useState<string>('User');
+
   const [isNewSubjectPopupOpen, setIsNewSubjectPopupOpen] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [isProfilePopupOpen, setIsProfilePopupOpen] = useState(false);
@@ -400,6 +402,11 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
 
   const [editingSubjectId, setEditingSubjectId] = useState<string | null>(null);
+
+  const [editingUsername, setEditingUsername] = useState(false);
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [tempUsername, setTempUsername] = useState('');
+  const [tempEmail, setTempEmail] = useState('');
 
   const handleEditFolder = (folderId: string) => {
     setEditingFolderId(folderId);
@@ -757,6 +764,7 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
 
       setUsername(response.data.username);
       setProfileImageUrl(response.data.profile_image_url || null);
+      setEmail(response.data.email);
       setLoading(false);
       console.log('User data:', response.data);
     } catch (err) {
@@ -1035,6 +1043,14 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
   const handleEditNote = (noteId: string) => {
     setEditingNoteId(noteId);
   };
+  const handleEditUsername = () => {
+    setEditingUsername(true);
+    setTempUsername(username);
+  };
+  const handleEditEmail = () => {
+    setEditingEmail(true);
+    setTempEmail(email);
+  };
 
   const handleSaveEdit = async (noteId: string, newTitle: string) => {
     try {
@@ -1167,10 +1183,7 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
     setIsNewCategoryPopupOpen(true);
   };
 
-  const handleEditProfile = () => {
-    console.log('Edit profile clicked');
-    // Implement edit profile logic here
-  };
+ 
 
   const handleDeleteAccount = () => {
     console.log('Delete account clicked');
@@ -1194,6 +1207,32 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
         console.error('Error updating profile image:', error);
         showToast('error', 'Error', 'Failed to update profile image');
       }
+    }
+  };
+
+  const handleSaveUsername = async () => {
+    try {
+      // TODO: Implement API call to update username
+      //await api.updateUsername(tempUsername);
+      setUsername(tempUsername);
+      setEditingUsername(false);
+      showToast('success', 'Success', 'Username updated successfully');
+    } catch (error) {
+      console.error('Error updating username:', error);
+      showToast('error', 'Error', 'Failed to update username');
+    }
+  };
+
+  const handleSaveEmail = async () => {
+    try {
+      // TODO: Implement API call to update email
+      //await api.updateEmail(tempEmail);
+      setEmail(tempEmail);
+      setEditingEmail(false);
+      showToast('success', 'Success', 'Email updated successfully');
+    } catch (error) {
+      console.error('Error updating email:', error);
+      showToast('error', 'Error', 'Failed to update email');
     }
   };
 
@@ -1670,7 +1709,7 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
       >
         <div className="flex flex-col items-center">
           <div 
-            className="cursor-pointer transition-transform hover:scale-105 active:scale-100 mb-6"
+            className="cursor-pointer transition-transform hover:scale-105 active:scale-100 mb-6 pt-4"
             onClick={handleAvatarClick}
           >
             <Avatar 
@@ -1681,15 +1720,65 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
               className="w-24 h-24"
             />
           </div>
-          <h2 className="text-2xl font-bold mb-6">{username}</h2>
+          <div className="flex items-center mb-6">
+            {editingUsername ? (
+              <div className="flex items-center">
+                <input
+                  type="text"
+                  value={tempUsername}
+                  onChange={(e) => setTempUsername(e.target.value)}
+                  className="border rounded px-2 py-1 mr-2"
+                />
+                <button
+                  onClick={handleSaveUsername}
+                  className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition duration-300 ease-in-out"
+                >
+                  Save
+                </button>
+              </div>
+            ) : (
+              <>
+                <h2 className="text-2xl font-bold mr-2">{username}</h2>
+                <button
+                  onClick={handleEditUsername}
+                  className="p-2 rounded-full hover:bg-gray-200 transition duration-300 ease-in-out"
+                >
+                  <i className="pi pi-pencil text-blue-500"></i>
+                </button>
+              </>
+            )}
+          </div>
+          <div className="flex items-center mb-6">
+            {editingEmail ? (
+              <div className="flex items-center">
+                <input
+                  type="email"
+                  value={tempEmail}
+                  onChange={(e) => setTempEmail(e.target.value)}
+                  className="border rounded px-2 py-1 mr-2"
+                />
+                <button
+                  onClick={handleSaveEmail}
+                  className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition duration-300 ease-in-out"
+                >
+                  Save
+                </button>
+              </div>
+            ) : (
+              <>
+                <h2 className="text-2xl font-bold mr-2">{email}</h2>
+                <button
+                  onClick={handleEditEmail}
+                  className="p-2 rounded-full hover:bg-gray-200 transition duration-300 ease-in-out"
+                >
+                  <i className="pi pi-pencil text-blue-500"></i>
+                </button>
+              </>
+            )}
+          </div>
+
           <div className="w-full space-y-4">
-            <button
-              onClick={handleEditProfile}
-              className="w-full py-2 px-4 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition duration-300 ease-in-out flex items-center justify-center"
-            >
-              <i className="pi pi-user-edit mr-2"></i>
-              Edit Profile
-            </button>
+          
             <button
               onClick={handleDeleteAccount}
               className="w-full py-2 px-4 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-300 ease-in-out flex items-center justify-center"

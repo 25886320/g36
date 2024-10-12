@@ -2,7 +2,7 @@
 
 - Inside this file, add the following:
 
-```mardkown
+```markdown
 DATABASE_URL=<database-url>
 JWT_SECRET=<jwt-secret>
 ```
