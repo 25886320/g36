@@ -382,7 +382,7 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
 
   useEffect(() => {
     // Establish WebSocket connection only once when the component mounts
-    socketRef.current = new WebSocket('https://g36.onrender.com');
+    socketRef.current = new WebSocket('ws://localhost:8000');
 
     socketRef.current.onopen = () => {
       console.log('Connected to WebSocket server');
