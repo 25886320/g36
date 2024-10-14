@@ -10,7 +10,10 @@ const WebSocket = require('ws');
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:3000', 'https://your-react-app.vercel.app'],
+  credentials: true,
+}));
 app.use(express.json());
 const authRoutes = require('./routes/auth');
 const subjectRoutes = require('./routes/subjects');
