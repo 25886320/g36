@@ -11,7 +11,7 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:3000', 'https://your-react-app.vercel.app'],
+  origin: ['http://localhost:8000', 'https://g36.onrender.com'],
   credentials: true,
 }));
 app.use(express.json());
