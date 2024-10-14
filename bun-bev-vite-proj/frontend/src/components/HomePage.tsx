@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { FaPalette, FaSearch, FaPlus, FaEdit, FaTrash, FaShare, FaSort, FaEllipsisV } from 'react-icons/fa';
+import { FaPalette, FaSearch, FaPlus, FaEdit, FaTrash, FaShare, FaSort, FaEllipsisV, FaBars } from 'react-icons/fa';
 import '../styles/HomePage.css';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
@@ -9,6 +9,7 @@ import { Dialog } from 'primereact/dialog';
 import { Badge } from 'primereact/badge';
 import { Button } from 'primereact/button';
 import { Skeleton } from 'primereact/skeleton';
+import { ProgressSpinner } from 'primereact/progressspinner';
 
 interface HomePageProps {
   logout: () => void;
@@ -70,6 +71,7 @@ interface ConfirmationPopupProps {
   message: string;
   onConfirm: () => void;
   onCancel: () => void;
+  className?: string;
 }
 
 interface NewSubjectPopupProps {
@@ -100,16 +102,16 @@ const ErrorPopup: React.FC<ErrorPopupProps> = ({ message, onClose }) => {
 };
 
 const ShareNotePopup: React.FC<ShareNotePopupProps> = ({ isOpen, onClose, onShare, noteId }) => {
-  const [email, setEmail] = useState('');
+  const [shareUserEmail, setShareUserEmail] = useState('');
   const [isEditor, setIsEditor] = useState(false);
 
   if (!isOpen || !noteId) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (email.trim()) {
-      onShare(noteId, email, isEditor);
-      setEmail('');
+    if (shareUserEmail.trim()) {
+      onShare(noteId, shareUserEmail, isEditor);
+      setShareUserEmail('');
       setIsEditor(false);
     }
   };
@@ -126,8 +128,8 @@ const ShareNotePopup: React.FC<ShareNotePopupProps> = ({ isOpen, onClose, onShar
           <input
             type="email"
             placeholder="Enter email address"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={shareUserEmail}
+            onChange={(e) => setShareUserEmail(e.target.value)}
             required
             autoFocus
             className="share-input"
@@ -216,14 +218,11 @@ const NewNotePopup: React.FC<NewNotePopupProps> = ({ isOpen, onClose, onSubmit, 
   const [subjectName, setSubjectName] = useState('');
 
   useEffect(() => {
-    if (selectedFolderName && selectedSubjectName) {
-      setFolderName(selectedFolderName);
-      setSubjectName(selectedSubjectName);
-    } else {
-      setFolderName('');
-      setSubjectName('');
+    if (isOpen) {
+      setFolderName(selectedFolderName || '');
+      setSubjectName(selectedSubjectName || '');
     }
-  }, [selectedFolderName, selectedSubjectName]);
+  }, [isOpen, selectedFolderName, selectedSubjectName]);
 
   if (!isOpen) return null;
 
@@ -241,8 +240,8 @@ const NewNotePopup: React.FC<NewNotePopupProps> = ({ isOpen, onClose, onSubmit, 
 
   const resetForm = () => {
     setTitle('');
-    setFolderName('');
-    setSubjectName('');
+    setFolderName(selectedFolderName || '');
+    setSubjectName(selectedSubjectName || '');
   };
 
   return (
@@ -282,11 +281,11 @@ const NewNotePopup: React.FC<NewNotePopupProps> = ({ isOpen, onClose, onSubmit, 
   );
 };
 
-const ConfirmationPopup: React.FC<ConfirmationPopupProps> = ({ isOpen, message, onConfirm, onCancel }) => {
+const ConfirmationPopup: React.FC<ConfirmationPopupProps> = ({ isOpen, message, onConfirm, onCancel, className }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="popup-overlay">
+    <div className={`popup-overlay ${className || ''}`}>
       <div className="popup confirmation-popup">
         <p>{message}</p>
         <div className="popup-buttons">
@@ -340,14 +339,15 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
   const [folders, setFolders] = useState<Folder[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
-  const [subjectSearchTerm, setSubjectSearchTerm] = useState('');
-  const [mainSearchTerm, setMainSearchTerm] = useState('');
+  const [mainSearchTerm, setMainSearchTerm] = useState<string>('');
   const [expandedFolders, setExpandedFolders] = useState<string[]>([]);
   const [currentView, setCurrentView] = useState<'all' | 'folder' | Subject>('all');
   const [isNewNotePopupOpen, setIsNewNotePopupOpen] = useState(false);
   const [isNewCategoryPopupOpen, setIsNewCategoryPopupOpen] = useState(false);
   const [isSharingNotePopupOpen, setIsSharingNotePopupOpen] = useState(false);
   const [shareNoteId, setShareNoteId] = useState<string | null>(null);
+  const [isSidebarVisible, setIsSidebarVisible] = useState<boolean>(true);
+
 
   //const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
@@ -361,6 +361,8 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
   const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
   const [username, setUsername] = useState<string>('User');
   const [email, setEmail] = useState<string>('User');
+  const [tempUsername, setTempUsername] = useState<string>(username);
+  const [tempEmail, setTempEmail] = useState<string>(email);
 
   const [isNewSubjectPopupOpen, setIsNewSubjectPopupOpen] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
@@ -374,7 +376,54 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
   const [isInboxPopupOpen, setIsInboxPopupOpen] = useState<boolean>(false);
   const [showColorPicker, setShowColorPicker] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [categorySearchTerm, setCategorySearchTerm] = useState<string>('');
 
+  const socketRef = useRef<WebSocket | null>(null);
+
+  useEffect(() => {
+    // Establish WebSocket connection only once when the component mounts
+    socketRef.current = new WebSocket('ws://localhost:8000');
+
+    socketRef.current.onopen = () => {
+      console.log('Connected to WebSocket server');
+    };
+
+    socketRef.current.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'notification') {
+        // Show the notification using Toast
+        showToast('info', 'New Note Shared', data.message || 'New note has been shared');
+        fetchSharedNotes();
+      }
+    };
+
+    socketRef.current.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+
+    socketRef.current.onclose = () => {
+      console.log('Disconnected from WebSocket server');
+    };
+
+    // Close the WebSocket connection when the component unmounts
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.close();
+      }
+    };
+  }, []);
+
+  const registerWebSocket = (userEmail: string) => {
+    if (socketRef.current && userEmail) {
+      socketRef.current.send(
+        JSON.stringify({
+          type: 'register',
+          email: userEmail,
+        })
+      );
+      console.log(`${userEmail} registered for real-time updates`);
+    }
+  };
 
   const colors = [
     '#a1b5a1',
@@ -398,47 +447,176 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
 
   const [deleteCategoryConfirmation, setDeleteCategoryConfirmation] = useState<{ isOpen: boolean; folderId: string | null }>({ isOpen: false, folderId: null });
   const [deleteSubjectConfirmation, setDeleteSubjectConfirmation] = useState<{ isOpen: boolean; subjectId: string | null }>({ isOpen: false, subjectId: null });
-
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
-
   const [editingSubjectId, setEditingSubjectId] = useState<string | null>(null);
+  //const [editingUsername, setEditingUsername] = useState(false);
+  //const [editingEmail, setEditingEmail] = useState(false);
+  const [deleteAccountConfirmation, setDeleteAccountConfirmation] = useState({ isOpen: false });
 
-  const [editingUsername, setEditingUsername] = useState(false);
-  const [editingEmail, setEditingEmail] = useState(false);
-  const [tempUsername, setTempUsername] = useState('');
-  const [tempEmail, setTempEmail] = useState('');
+  //const handleDeleteAccount = () => {
+  //  setDeleteAccountConfirmation({ isOpen: true });
+  //};
+  
+  const confirmDeleteAccount = async () => {
+    try {
+      logout();
+      await api.deleteAccount();
+      showToast('success', 'Account Deleted', 'Your account has been successfully deleted.');
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      showToast('error', 'Error', 'Failed to delete account. Please try again.');
+    }
+    setDeleteAccountConfirmation({ isOpen: false });
+  };
+
+  const [waitingForUsername, setWaitingForUsername] = useState(false);
+
+  const handleSaveUsername = async () => {
+    try {
+      setWaitingForUsername(true);
+      await api.updateUsername(tempUsername);
+      setUsername(tempUsername);
+      showToast('success', 'Success', 'Username updated successfully');
+    } catch (error: unknown) {
+      console.error('Error updating username:', error);
+
+      const err = error as { response?: { status: number, data: { message: string } } };
+      if (err.response && err.response.status === 400) {
+        showToast('error', 'Error', err.response.data.message);
+      } else {
+        showToast('error', 'Error', 'Failed to update username. Please try again.');
+      }
+    } finally {
+      setWaitingForUsername(false);
+    }
+  };
+
+  const [waitingForEmail, setWaitingForEmail] = useState(false);
+  
+  const handleSaveEmail = async () => {
+    try {
+      setWaitingForEmail(true);
+      await api.updateEmail(tempEmail);
+      setEmail(tempEmail);
+      showToast('success', 'Success', 'Email updated successfully');
+    } catch (error: unknown) {
+      console.error('Error updating email:', error);
+
+      const err = error as { response?: { status: number, data: { message: string } } };
+      if (err.response && err.response.status === 400) {
+        showToast('error', 'Error', err.response.data.message);
+      } else {
+        showToast('error', 'Error', 'Failed to update email. Please try again.');
+      }
+    } finally {
+      setWaitingForEmail(false);
+    }
+  };
 
   const handleEditFolder = (folderId: string) => {
     setEditingFolderId(folderId);
   };
 
+  const toggleSidebar = () => {
+    setIsSidebarVisible(!isSidebarVisible);
+  };
 
   const handleSaveFolderEdit = async (folderId: string, newName: string) => {
-    console.log('Saving folder edit:', folderId, newName);
+    if (newName.trim() === '') {
+      showToast('error', 'Error', 'Category name cannot be empty');
+      return;
+    }
+
+    const currentFolder = folders.find(folder => folder.id === folderId);
+    if (currentFolder && currentFolder.name === newName) {
+      setEditingFolderId(null);
+      return; 
+    }
+
     try {
-      const response = await api.editFolder(folderId, { name: newName });
-      console.log('Edit folder response:', response);
+      await api.editFolder(folderId, { name: newName });
       setFolders(prevFolders =>
         prevFolders.map(folder =>
           folder.id === folderId ? { ...folder, name: newName } : folder
         )
       );
       setEditingFolderId(null);
-      showToast('info', 'Folder Name Updated', 'Folder name updated successfully');
+      showToast('info', 'Category Updated', 'Category name updated successfully');
     } catch (error) {
-      console.error('Error editing folder:', error);
+      console.error('Error editing category:', error);
       if (error instanceof Error && 'response' in error) {
         const axiosError = error as { response?: { data: any, status: number } };
         console.error('Error response:', axiosError.response?.data);
         console.error('Error status:', axiosError.response?.status);
       }
-      showToast('error', 'Error', `Failed to update folder name: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      showToast('error', 'Error', `Failed to update category name: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
+    if (newName.trim() === '') {
+      showToast('error', 'Error', 'Subject name cannot be empty');
+      return;
     }
 
+    const currentSubject = selectedFolder?.subjects.find(subject => subject.id === subjectId);
+    if (currentSubject && currentSubject.name === newName) {
+      setEditingSubjectId(null);
+      return;
+    }
+
+    try {
+      await api.editSubject(subjectId, { name: newName });
+      setFolders(prevFolders =>
+        prevFolders.map(folder => ({
+          ...folder,
+          subjects: folder.subjects.map(subject =>
+            subject.id === subjectId ? { ...subject, name: newName } : subject
+          )
+        }))
+      );
+      setEditingSubjectId(null);
+      showToast('info', 'Subject Updated', 'Subject name updated successfully');
+    } catch (error) {
+      console.error('Error editing subject:', error);
+      showToast('error', 'Error', `Failed to update subject name: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const handleSaveEdit = async (noteId: string, newTitle: string) => {
+    if (newTitle.trim() === '') {
+      showToast('error', 'Error', 'Note title cannot be empty');
+      return;
+    }
+  
+    const currentNote = notes.find(note => note.id === noteId);
+    if (currentNote && currentNote.title === newTitle) {
+      setEditingNoteId(null);
+      return;
+    }
+  
+    try {
+      await api.editNote(noteId, { title: newTitle, content: '' });
+      setNotes(prevNotes =>
+        prevNotes.map(note =>
+          note.id === noteId ? { ...note, title: newTitle } : note
+        )
+      );
+      setEditingNoteId(null);
+      showToast('info', 'Note Updated', 'Note title updated successfully');
+    } catch (error) {
+      console.error('Error editing note:', error);
+      showToast('error', 'Error', `Failed to update note title: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const filteredFolders = folders.filter(folder =>
+    folder.name.toLowerCase().startsWith(categorySearchTerm.toLowerCase())
+  );
+
 
   const handleFolderOptions = (e: React.MouseEvent, folderId: string) => {
     e.stopPropagation();
@@ -493,20 +671,25 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
   const confirmDeleteCategory = async () => {
     if (deleteCategoryConfirmation.folderId) {
       try {
+        setDeleteCategoryConfirmation({ isOpen: false, folderId: null });
+        setLoadingNewNote(true);
         await api.deleteFolder(deleteCategoryConfirmation.folderId);
         setFolders(prevFolders => prevFolders.filter(folder => folder.id !== deleteCategoryConfirmation.folderId));
         showToast('info', 'Category Deleted', 'Category deleted successfully');
       } catch (err) {
         console.error('Error deleting category:', err);
         showToast('error', 'Error', 'Failed to delete category. Please try again.');
+      } finally {
+        setLoadingNewNote(false);
       }
     }
-    setDeleteCategoryConfirmation({ isOpen: false, folderId: null });
   };
 
   const confirmDeleteSubject = async () => {
     if (deleteSubjectConfirmation.subjectId) {
       try {
+        setDeleteSubjectConfirmation({ isOpen: false, subjectId: null });
+        setLoadingNewNote(true);
         await api.deleteSubject(deleteSubjectConfirmation.subjectId);
         setFolders(prevFolders => 
           prevFolders.map(folder => ({
@@ -518,17 +701,27 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
       } catch (err) {
         console.error('Error deleting subject:', err);
         showToast('error', 'Error', 'Failed to delete subject. Please try again.');
+      } finally {
+        setLoadingNewNote(false);
       }
     }
-    setDeleteSubjectConfirmation({ isOpen: false, subjectId: null });
   };
 
+  const handleProfilePopupOpen = () => {
+    setTempUsername(username);
+    setTempEmail(email);
+    setIsProfilePopupOpen(true);
+  };
+
+  const handleProfilePopupClose = () => {
+    setIsProfilePopupOpen(false);
+  };
 
   const menuItems = [
     {
       label: 'Profile',
       icon: 'pi pi-user',
-      command: () => setIsProfilePopupOpen(true),
+      command: handleProfilePopupOpen,
       template: (item: any, options: any) => (
         <button onClick={options.onClick} className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-100 transition-colors duration-200">
           <span className="flex items-center">
@@ -696,7 +889,8 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
 
     if (!currentNote) {
       return null;
-  }
+    }
+  
   
     return (
       <Dialog 
@@ -705,6 +899,7 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
         style={{ width: '50vw', height: '60vh' }} 
         onHide={() => setIsInboxPopupOpen(false)}
         className="p-fluid shared-note-dialog"
+        draggable={false}
       >
         <div className="flex flex-col h-full">
           <div className="flex-grow flex items-center">
@@ -760,13 +955,16 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
 
   const fetchUserData = async () => {
     try {
-      const response = await api.getUserData();
+      const response = await api.getUserProfile();
 
       setUsername(response.data.username);
-      setProfileImageUrl(response.data.profile_image_url || null);
+      setTempUsername(response.data.username);
+      setProfileImageUrl(response.data.avatar_url || null);
       setEmail(response.data.email);
+      setTempEmail(response.data.email);
       setLoading(false);
-      console.log('User data:', response.data);
+      // console.log('User data:', response.data);
+      registerWebSocket(response.data.email);
     } catch (err) {
       console.error('Error fetching user data:', err);
       setError('Failed to load user data');
@@ -794,7 +992,7 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
         content: note.content || '',
         color: note.color || '#637c99',
       }));
-      console.log('Transformed notes:', transformedNotes);
+      // console.log('Transformed notes:', transformedNotes);
       setNotes(transformedNotes);
     } catch (err) {
       console.error('Error fetching notes:', err);
@@ -806,7 +1004,7 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
   const fetchFoldersAndSubjects = useCallback(async () => {
     try {
       const response = await api.getFoldersAndSubjects();
-      console.log('Raw folders and subjects response:', response.data);
+      // console.log('Raw folders and subjects response:', response.data);
       
       const transformedFolders = response.data.folders.map((folder: any) => ({
         ...folder,
@@ -814,24 +1012,19 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
         subjects: folder.subjects.map((subject: any) => ({
           ...subject,
           id: subject.id.toString(),
-          createdAt: subject.created_at || subject.createdAt || new Date().toISOString(),
-          lastEditDate: subject.last_edit_date || subject.lastEditDate || subject.createdAt,
-          notes: subject.notes ? subject.notes.map((note: any) => ({
-            ...note,
-            id: note.id.toString(),
-            updatedAt: note.updated_at || note.updatedAt || new Date().toISOString(),
-          })) : [],
+          notes: notes.filter(note => note.subjectName === subject.name),
+          lastEditDate: subject.last_edit_date || subject.created_at
         })),
       }));
       
-      console.log('Transformed folders:', transformedFolders);
+      // console.log('Transformed folders:', transformedFolders);
       setFolders(transformedFolders);
     } catch (err) {
       console.error('Error fetching folders and subjects:', err);
       setError('Failed to load folders and subjects');
       showToast('error', 'Error', 'Failed to load folders and subjects');
     }
-  }, [showToast]);
+  }, [notes, showToast]);
 
   const toggleFolder = (folderId: string) => {
     console.log('Toggling folder:', folderId);
@@ -859,15 +1052,14 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
   useEffect(() => {
     fetchUserData();
     fetchNotes();
+  }, []); 
+
+  useEffect(() => {
     fetchFoldersAndSubjects();
-  }, [fetchNotes, fetchFoldersAndSubjects, selectedFolder, selectedSubject]);
+  }, [fetchFoldersAndSubjects, notes]); 
 
   const handleAddNote = () => {
     setIsNewNotePopupOpen(true);
-  };
-
-  const handleSidebarSearch = () => {
-    console.log('Sidebar search clicked with term:', subjectSearchTerm);
   };
 
   const handleMainSearch = () => {
@@ -907,6 +1099,8 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
   const handleNewSubjectSubmit = useCallback(async (subjectName: string) => {
     if (selectedFolderId) {
       try {
+        setIsNewSubjectPopupOpen(false);
+        setLoadingNewNote(true);
         console.log('Sending subject creation request:', { name: subjectName, folder_id: selectedFolderId });
         const response = await api.createSubject({
           name: subjectName,
@@ -942,7 +1136,6 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
           return updatedFolders;
         });
 
-        setIsNewSubjectPopupOpen(false);
         showToast('info', 'Success', 'Subject created successfully');
         
         // Refresh folders and subjects
@@ -962,6 +1155,8 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
         }
         setErrorPopup({ isOpen: true, message: 'Failed to create subject. Please try again.' });
         showToast('error', 'Error', 'Failed to create subject. Please try again.');
+      } finally {
+        setLoadingNewNote(false);
       }
     }
   }, [selectedFolderId, showToast]);
@@ -984,20 +1179,22 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
         currentView !== "folder" && note.subjectName === currentView.name
       );
     }
+    if (mainSearchTerm) {
+      currentNotes = currentNotes.filter(note => 
+          note.title.toLowerCase().startsWith(mainSearchTerm.toLowerCase())
+      );
+  }
+
     return sortNotes(currentNotes);
   };
 
-  const handleSubjectClick = useCallback((subject: Subject) => {
+  const handleSubjectClick = useCallback((subject: Subject, folder: Folder) => {
     console.log('Subject clicked:', subject);
-    // Find the notes that belong to this subject
-    const subjectNotes = notes.filter(note => 
-      note.subjectName === subject.name && 
-      note.folderName === selectedFolder?.name
-    );
-    console.log('Notes for this subject:', subjectNotes);
-    setSelectedSubject({...subject, notes: subjectNotes});
-    setCurrentView({...subject, notes: subjectNotes});
-  }, [notes, selectedFolder]);
+    console.log('Subject notes:', subject.notes);
+    setSelectedFolder(folder);
+    setSelectedSubject(subject);
+    setCurrentView(subject);
+  }, []);
 
   const handleNoteClick = (note: Note) => {
     navigate(`/notes/${note.id}`, { state: { note } });
@@ -1011,12 +1208,14 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
     if (deleteConfirmation.noteId) {
       console.log('Attempting to delete note with id:', deleteConfirmation.noteId);
       try {
+        setDeleteConfirmation({ isOpen: false, noteId: null });
+        setLoadingNewNote(true);
         const response = await api.deleteNote(deleteConfirmation.noteId);
         console.log('Delete response:', response);
         
         if (response.status === 200) {
           setNotes(prevNotes => prevNotes.filter(note => note.id !== deleteConfirmation.noteId));
-          setErrorPopup({ isOpen: true, message: 'Note deleted successfully' });
+          showToast('info', 'Note Deleted', 'Note Deleted Successfully');
         } else {
           throw new Error('Unexpected response status');
         }
@@ -1030,9 +1229,10 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
           setErrorPopup({ isOpen: true, message: 'Failed to delete note. Please try again.' });
           showToast('error', 'Error', 'Failed to delete note. Please try again.');
         }
+      } finally {
+        setLoadingNewNote(false);
       }
     }
-    setDeleteConfirmation({ isOpen: false, noteId: null });
   };
 
 
@@ -1043,64 +1243,57 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
   const handleEditNote = (noteId: string) => {
     setEditingNoteId(noteId);
   };
-  const handleEditUsername = () => {
-    setEditingUsername(true);
-    setTempUsername(username);
-  };
-  const handleEditEmail = () => {
-    setEditingEmail(true);
-    setTempEmail(email);
+
+
+  const handleEditSubject = (subjectId: string) => {
+    setEditingSubjectId(subjectId);
   };
 
-  const handleSaveEdit = async (noteId: string, newTitle: string) => {
-    try {
-      await api.editNote(noteId, { title: newTitle, content: '' });
-      setNotes(prevNotes =>
-        prevNotes.map(note =>
-          note.id === noteId ? { ...note, title: newTitle } : note
-        )
-      );
-      setEditingNoteId(null);
-      showToast('info', 'Success', 'Note title updated successfully');
-    } catch (error) {
-      console.error('Error editing note:', error);
-      showToast('error', 'Error', 'Failed to update note title. Please try again.');
+  const handleNoteShare = useCallback(async (noteId: string, shareUserEmail: string, isEditor: boolean) => {
+    console.log('Attempting to share note:', { noteId, shareUserEmail, isEditor });
+    
+    if (shareUserEmail.toLowerCase() === email.toLowerCase()) {
+      console.log('Sharing with self attempted');
+      showToast('error', 'Error', 'You cannot share a note with yourself.');
+      return;
     }
-  };
-
-const handleEditSubject = (subjectId: string) => {
-  setEditingSubjectId(subjectId);
-};
-
-const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
-  try {
-    await api.editSubject(subjectId, { name: newName });
-    setFolders(prevFolders =>
-      prevFolders.map(folder => ({
-        ...folder,
-        subjects: folder.subjects.map(subject =>
-          subject.id === subjectId ? { ...subject, name: newName } : subject
-        )
-      }))
-    );
-    setEditingSubjectId(null);
-    showToast('info', 'Success', 'Subject name updated');
-  } catch (error) {
-    console.error('Error editing subject:', error);
-    showToast('error', 'Error', 'Failed to update subject name. Please try again.');
-  }
-};
-
-  const handleNoteShare = useCallback(async (noteId: string, email: string, isEditor: boolean) => {
+  
     try {
-      await api.shareNote(noteId, email, isEditor);
-      showToast('info', 'Success', 'Note shared successfully');
+      console.log('Checking if email exists:', shareUserEmail);
+      const emailExists = await api.checkEmailExists(shareUserEmail);
+      console.log('Email exists:', emailExists);
+      
+      if (!emailExists) {
+        console.log('Email does not exist:', shareUserEmail);
+        showToast('error', 'Error', 'The provided email does not exist.');
+        return;
+      }
+  
+      console.log('Sharing note:', { noteId, shareUserEmail, isEditor });
+      await api.shareNote(noteId, shareUserEmail, isEditor);
+      console.log('Note shared successfully');
+      showToast('success', 'Success', 'Note shared successfully');
       setIsSharingNotePopupOpen(false);
+
+      // Notify the WebSocket server
+      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+        socketRef.current.send(
+          JSON.stringify({
+            type: 'share',
+            sharedEmail: shareUserEmail,
+            noteId,
+            sharedBy: email,
+          })
+        );
+      }
     } catch (error) {
       console.error('Error sharing note:', error);
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+      }
       showToast('error', 'Error', 'Failed to share note. Please try again.');
     }
-  }, [showToast]);
+  }, [email, showToast]);
 
   const handleNewCategorySubmit = useCallback(async (folderName: string) => {
     if (folderName) {
@@ -1109,6 +1302,8 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
         return;
       }
       try {
+        setIsNewCategoryPopupOpen(false);
+        setLoadingNewNote(true);
         const response = await api.createFolder(folderName);
         console.log('Category created successfully:', response.data);
         
@@ -1126,10 +1321,13 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
         console.error('Error creating category:', err);
         setErrorPopup({ isOpen: true, message: 'Failed to create category. Please try again.' });
         showToast('error', 'Error', 'Failed to create category. Please try again.');
+      } finally {
+        setLoadingNewNote(false);
       }
     }
-    setIsNewCategoryPopupOpen(false)
-  }, [folders, showToast, fetchFoldersAndSubjects]); 
+  }, [folders, showToast, fetchFoldersAndSubjects]);
+
+  const [loadingNewNote, setLoadingNewNote] = useState(false);
 
   const handleNewNoteSubmit = useCallback(async (title: string, folderName: string, subjectName: string) => {
     
@@ -1137,27 +1335,41 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
       setErrorPopup({ isOpen: true, message: 'Too Many Notes. Maximum limit reached.' });
       showToast('warn', 'Too Many Notes', 'Maximum limit reached.');
       return;
-    }    
+    }
+
+    setLoadingNewNote(true);
 
     try {
+      const currentDate = new Date().toISOString();
+
       const response = await api.createNote({
         title,
         content: '',
         folderName,
         subjectName,
-        createdAt: new Date().toISOString()
+        createdAt: currentDate,
       });
+
+      // Manually update the local state to reflect the newly created note
+      if (selectedFolder && selectedSubject) {
+        fetchNotes();
+        fetchFoldersAndSubjects();
+        handleSubjectClick(selectedSubject, selectedFolder);
+      } else {
+        fetchNotes();
+        fetchFoldersAndSubjects();
+      }
           
       console.log('Note created successfully:', response.data);
-      setIsNewNotePopupOpen(false);
-      fetchNotes();
-      fetchFoldersAndSubjects();
+      showToast('info', 'New Note Created', 'Successfully created a new note');
     } catch (error) {
       console.error('Error creating note:', error);
       setErrorPopup({ isOpen: true, message: 'Failed to create note. Please try again.' });
       showToast('error', 'Error', 'Failed to create note. Please try again.');
+    } finally {
+      setLoadingNewNote(false);
     }
-  }, [fetchNotes, fetchFoldersAndSubjects]);
+  }, [selectedSubject, selectedFolder, showToast, fetchNotes]);
 
   const getContentPreview = (content: string, maxLength: number = 100) => {
     if (!content) return '';
@@ -1170,7 +1382,7 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
   const handleSort = (order: 'asc' | 'desc') => {
     setSortOrder(order);
     setIsSortOpen(false);
-    showToast('success', 'Sorted', `Notes sorted in ${order === 'asc' ? 'ascending' : 'descending'} order`);
+    showToast('info', 'Sorted', `Notes sorted in ${order === 'asc' ? 'ascending' : 'descending'} order`);
   };
 
   const handleShare = useCallback((noteId: string,) => {
@@ -1183,12 +1395,7 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
     setIsNewCategoryPopupOpen(true);
   };
 
- 
-
-  const handleDeleteAccount = () => {
-    console.log('Delete account clicked');
-    // Implement delete account logic here
-  };
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
@@ -1198,45 +1405,19 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
     const file = event.target.files?.[0];
     if (file) {
       try {
+        setIsLoading(true);
         const imageUrl = await api.uploadProfileImage(file);
         setProfileImageUrl(imageUrl);
-        //TODO implement in api:
-        //await api.updateProfileImage(imageUrl);
+        await api.updateProfileImage(imageUrl);
         showToast('info', 'Profile Image updated', 'Profile image updated successfully');
       } catch (error) {
         console.error('Error updating profile image:', error);
         showToast('error', 'Error', 'Failed to update profile image');
+      } finally {
+        setIsLoading(false);
       }
     }
   };
-
-  const handleSaveUsername = async () => {
-    try {
-      // TODO: Implement API call to update username
-      //await api.updateUsername(tempUsername);
-      setUsername(tempUsername);
-      setEditingUsername(false);
-      showToast('success', 'Success', 'Username updated successfully');
-    } catch (error) {
-      console.error('Error updating username:', error);
-      showToast('error', 'Error', 'Failed to update username');
-    }
-  };
-
-  const handleSaveEmail = async () => {
-    try {
-      // TODO: Implement API call to update email
-      //await api.updateEmail(tempEmail);
-      setEmail(tempEmail);
-      setEditingEmail(false);
-      showToast('success', 'Success', 'Email updated successfully');
-    } catch (error) {
-      console.error('Error updating email:', error);
-      showToast('error', 'Error', 'Failed to update email');
-    }
-  };
-
- 
 
   // This is replaced with showToast(). TODO: remove
   if (error) {
@@ -1245,60 +1426,69 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
 
   return (
     <div className="home-page">
-      <div className="sidebar">
-        <div className="user-info flex items-center mb-8 relative">
-          <div className="relative">
-
-            {loading ? (
-              // Show skeleton for avatar while loading
-              <Skeleton shape="circle" size="3rem" />
-            ) : (
-              <Avatar 
-                image={profileImageUrl || undefined}
-                icon={!profileImageUrl ? "pi pi-user" : undefined}
-                className="shadow-sm transform transition-transform hover:scale-110 active:scale-100 cursor-pointer"
-                size="large" 
-                shape="circle" 
-                onClick={(e) => menu.current?.toggle(e)} 
-              />
-            )}
-
-            {inboxCount > 0 && !loading && (
-              <Badge 
-                value={inboxCount} 
-                severity="danger" 
-                className="absolute -top-2 -right-2"
-              ></Badge>
-            )}
-          </div>
-          {loading ? (
-          // Show skeleton for username while loading
-            <Skeleton width="4rem" className="ml-3" />
-          ) : (
-            <span
-              className="username ml-3 font-medium text-lg transform transition-transform hover:scale-110 active:scale-100 cursor-pointer"
-              onClick={(e) => menu.current?.toggle(e)}
-            >
-              {username}
-            </span>
-          )}
-          <Menu 
-            model={menuItems} 
-            popup 
-            ref={menu} 
-            className="rounded-lg mt-2 w-full max-w-60 border-2 shadow-lg" 
+      {loadingNewNote && (
+        <div className="fixed inset-0 flex items-center justify-center bg-opacity-50 bg-gray-400 z-50">
+          <ProgressSpinner
+            style={{ width: '70px', height: '70px' }}
+            strokeWidth="4"
+            animationDuration="2s"
           />
+        </div>
+      )}
+      <div className={`sidebar ${isSidebarVisible ? 'visible' : 'hidden'}`}>
+        {inboxCount > 0 && !loading && (
+        <Badge
+          value={inboxCount} 
+          severity="danger"
+          onClick={handleInbox}
+          className="absolute z-10 left-16 top-7 transform transition-transform hover:scale-105 active:scale-100 cursor-pointer"
+        ></Badge>
+        )}
+        <div className="user-info flex items-center mb-8 relative">
+        
+        <div className="flex">
+          {loading ? (
+            // Show skeleton for avatar while loading
+            <Skeleton shape="circle" size="3rem" />
+          ) : (
+            <Avatar 
+              image={profileImageUrl || undefined}
+              icon={"pi pi-user"}
+              className="w-12 h-12 rounded-full shadow-sm transform transition-transform hover:scale-110 active:scale-100 cursor-pointer object-cover overflow-hidden"
+              size="large" 
+              shape="circle" 
+              onClick={(e) => menu.current?.toggle(e)} 
+            />
+          )}
+        </div>
+        {loading ? (
+        // Show skeleton for username while loading
+          <Skeleton width="4rem" className="ml-3" />
+        ) : (
+          <span
+            className="username ml-3 font-medium text-lg transform transition-transform hover:scale-110 active:scale-100 cursor-pointer"
+            onClick={(e) => menu.current?.toggle(e)}
+          >
+            {username}
+          </span>
+        )}
+        <Menu 
+          model={menuItems} 
+          popup 
+          ref={menu} 
+          className="rounded-lg mt-2 w-full max-w-60 border-2 shadow-lg" 
+        />
         </div>
         <div className="search-bar">
           <div className="search-container">
             <input
               type="text"
               placeholder="Search Category"
-              value={subjectSearchTerm}
-              onChange={(e) => setSubjectSearchTerm(e.target.value)}
+              value={categorySearchTerm}
+              onChange={(e) => setCategorySearchTerm(e.target.value)}
               className="search-input"
             />
-            <button onClick={handleSidebarSearch} className="search-button">
+            <button className="search-button">
               <FaSearch />
             </button>
           </div>
@@ -1318,7 +1508,7 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
               <Skeleton height="3rem" className="mb-4" borderRadius="8px" />
             </>
           ) : (
-            folders.map((folder) => (
+            filteredFolders.map((folder) => (
               <div key={folder.id} className="folder">
                 <div
                   className={`folder-header ${selectedFolder?.id === folder.id ? 'selected' : ''}`}
@@ -1336,6 +1526,7 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
                       }}
                       onClick={(e) => e.stopPropagation()}
                       autoFocus
+                      className="folder-edit-input" 
                     />
                   ) : (
                     <span>{folder.name}</span>
@@ -1369,6 +1560,7 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
                         <div
                           key={subject.id}
                           className={`subject ${selectedSubject?.id === subject.id ? 'selected' : ''}`}
+                          onClick={() => handleSubjectClick(subject, folder)}
                         >
                           {editingSubjectId === subject.id ? (
                             <input
@@ -1394,14 +1586,33 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
               </div>
             ))
           )}
-          
         </div>
-        <button className="signout-btn" onClick={handleCreateFolder}>Create Category</button>
+        <div className="sidebar-footer">
+          <button className="signout-btn" onClick={handleCreateFolder}>Create Category</button>
+        </div>
+      </div>
+      {/* <div 
+        className="burger-icon-container desktop-burger"
+        style={{ left: isSidebarVisible ? '300px' : '0' }}
+      >
+        <FaBars 
+          className="burger-icon cursor-pointer" 
+          onClick={toggleSidebar} 
+        />
+      </div> */}
+      <div 
+        className="burger-icon-container mobile-burger w-16 top-8 right-8 rounded-md"
+        onClick={toggleSidebar}
+      >
+        <FaBars 
+          className="burger-icon cursor-pointer" 
+        />
       </div>
       <div className="main-content">
         <div className="top-bar">
           {renderTitle()}
           <div className="top-bar-right">
+            
             <div className="search-container">
               <input
                 type="text"
@@ -1423,7 +1634,6 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
         {currentView === 'all' && (
           <div className="notes-grid">
             {loading ? (
-              // Show skeleton placeholders while loading notes
               <>
                 <div className="note-card">
                   <Skeleton shape="rectangle" height="120px" className="mb-5" />
@@ -1551,15 +1761,10 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
           <div className="subjects-grid">
             {selectedFolder.subjects && selectedFolder.subjects.length > 0 ? (
               selectedFolder.subjects.map(subject => (
-                <div key={subject.id} className="subject-block">
-                  <div onClick={() => handleSubjectClick(subject)}>
+                <div key={subject.id} className="subject-block" onClick={() => handleSubjectClick(subject, selectedFolder)}>
+                  <div className="subject-content">
                     <h3 className="subject-title">{subject.name}</h3>
-                    <p className="subject-info">Created on {"TODO FIX: formatDate(subject.createdAt) gives error"}</p>
-                    {subject.notes && subject.notes.length > 0 && (
-                      <p className="subject-info">
-                        Last edited: {formatDate(subject.notes[0].updatedAt)}
-                      </p>
-                    )}
+                    <p className="subject-info"></p>    
                   </div>
                   <div className="subject-actions">
                     <button 
@@ -1584,7 +1789,7 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
                 </div>
               ))
             ) : (
-              <p>No subjects found in this folder.</p>
+              <div className="no-notes-message">No subjects found in this Category.</div>
             )}
           </div>
         )}
@@ -1641,20 +1846,22 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
                     <button className="icon-button delete-btn" aria-label="Delete note" onClick={(e) => { e.stopPropagation(); handleDeleteNote(note.id); }}>
                       <FaTrash />
                     </button>
-                    <button className="icon-button share-btn" aria-label="Share note" onClick={(e) => { e.stopPropagation(); handleShare(note.id); }}>                      <FaShare />
+                    <button className="icon-button share-btn" aria-label="Share note" onClick={(e) => { e.stopPropagation(); handleShare(note.id); }}>
+                      <FaShare />
                     </button>
                   </div>
                 </div>
               ))
             ) : (
-              <p>No notes found in this subject.</p>
+              <div className="no-notes-message">No notes found in this subject.</div>
             )}
           </div>
         )}
   
       </div>
-      <div className="sort-container">
-        <button className="sort-btn" onClick={() => setIsSortOpen(!isSortOpen)} aria-label="Sort">
+      {currentView !== 'folder' && (
+        <div className="sort-container">
+          <button className="sort-btn" onClick={() => setIsSortOpen(!isSortOpen)} aria-label="Sort">
           <FaSort />
         </button>
         {isSortOpen && (
@@ -1664,6 +1871,7 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
           </div>
         )}
       </div>
+      )}
       <NewNotePopup
         isOpen={isNewNotePopupOpen}
         onClose={() => setIsNewNotePopupOpen(false)}
@@ -1702,86 +1910,91 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
       />
       <Dialog 
         visible={isProfilePopupOpen} 
-        onHide={() => setIsProfilePopupOpen(false)}
-        className="w-full max-w-lg"
+        onHide={handleProfilePopupClose}
+        className="w-full max-w-lg custom-header"
         header="Profile"
+        style={{ width: '400px' }} 
+        draggable={false}
         modal
       >
         <div className="flex flex-col items-center">
-          <div 
-            className="cursor-pointer transition-transform hover:scale-105 active:scale-100 mb-6 pt-4"
-            onClick={handleAvatarClick}
-          >
-            <Avatar 
-              image={profileImageUrl || undefined}
-              icon={!profileImageUrl ? "pi pi-user" : undefined}
-              size="xlarge" 
-              shape="circle"
-              className="w-24 h-24"
-            />
-          </div>
-          <div className="flex items-center mb-6">
-            {editingUsername ? (
-              <div className="flex items-center">
-                <input
-                  type="text"
-                  value={tempUsername}
-                  onChange={(e) => setTempUsername(e.target.value)}
-                  className="border rounded px-2 py-1 mr-2"
+          <div className="relative inline-block mb-6 pt-6">
+            <div 
+              className="cursor-pointer transition-transform hover:scale-105 active:scale-100"
+              onClick={handleAvatarClick}
+            >
+              <Avatar 
+                image={profileImageUrl || undefined}
+                icon={"pi pi-user"}
+                size="xlarge" 
+                shape="circle"
+                className="w-24 h-24 rounded-full object-cover overflow-hidden"
+              />
+            </div>
+            {isLoading && (
+              <div className="absolute inset-0 top-5 flex items-center justify-center bg-opacity-70 bg-white rounded-full">
+                <ProgressSpinner
+                  style={{ width: '20px', height: '20px' }}
+                  strokeWidth="5"
+                  animationDuration="2s"
                 />
-                <button
-                  onClick={handleSaveUsername}
-                  className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition duration-300 ease-in-out"
-                >
-                  Save
-                </button>
               </div>
-            ) : (
-              <>
-                <h2 className="text-2xl font-bold mr-2">{username}</h2>
-                <button
-                  onClick={handleEditUsername}
-                  className="p-2 rounded-full hover:bg-gray-200 transition duration-300 ease-in-out"
-                >
-                  <i className="pi pi-pencil text-blue-500"></i>
-                </button>
-              </>
             )}
           </div>
           <div className="flex items-center mb-6">
-            {editingEmail ? (
-              <div className="flex items-center">
-                <input
-                  type="email"
-                  value={tempEmail}
-                  onChange={(e) => setTempEmail(e.target.value)}
-                  className="border rounded px-2 py-1 mr-2"
-                />
-                <button
-                  onClick={handleSaveEmail}
-                  className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition duration-300 ease-in-out"
-                >
-                  Save
-                </button>
-              </div>
-            ) : (
-              <>
-                <h2 className="text-2xl font-bold mr-2">{email}</h2>
-                <button
-                  onClick={handleEditEmail}
-                  className="p-2 rounded-full hover:bg-gray-200 transition duration-300 ease-in-out"
-                >
-                  <i className="pi pi-pencil text-blue-500"></i>
-                </button>
-              </>
-            )}
+            <div className="flex items-center">
+              <input
+                type="text"
+                value={tempUsername}
+                onChange={(e) => setTempUsername(e.target.value)}
+                className="border rounded px-2 py-1 mr-2"
+              />
+              <button
+                onClick={handleSaveUsername}
+                className="bg-accentBlue text-white h-8 w-16 rounded hover:bg-primaryDark transition duration-300 ease-in-out"
+              >
+                {waitingForUsername ? (
+                  <ProgressSpinner
+                    style={{ width: '20px', height: '20px' }}
+                    strokeWidth="5"
+                    animationDuration="2s"
+                    className="top-0.5"
+                  />
+                ) : (
+                  'Save'
+                )}
+              </button>
+            </div>
           </div>
-
-          <div className="w-full space-y-4">
-          
+          <div className="flex items-center mb-6">
+            <div className="flex items-center">
+              <input
+                type="email"
+                value={tempEmail}
+                onChange={(e) => setTempEmail(e.target.value)}
+                className="border rounded px-2 py-1 mr-2"
+              />
+              <button
+                onClick={handleSaveEmail}
+                className="bg-accentBlue text-white h-8 w-16 rounded hover:bg-primaryDark transition duration-300 ease-in-out"
+              >
+                {waitingForEmail ? (
+                  <ProgressSpinner
+                    style={{ width: '20px', height: '20px' }}
+                    strokeWidth="5"
+                    animationDuration="2s"
+                    className="top-0.5"
+                  />
+                ) : (
+                  'Save'
+                )}
+              </button>
+            </div>
+          </div>
+          <div className="flex items-center mb-6">
             <button
-              onClick={handleDeleteAccount}
-              className="w-full py-2 px-4 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-300 ease-in-out flex items-center justify-center"
+              onClick={() => setDeleteAccountConfirmation({ isOpen: true })}
+              className="py-2 px-4 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-300 ease-in-out flex items-center justify-center"
             >
               <i className="pi pi-trash mr-2"></i>
               Delete Account
@@ -1802,13 +2015,20 @@ const handleSaveSubjectEdit = async (subjectId: string, newName: string) => {
         onConfirm={confirmDeleteSubject}
         onCancel={() => setDeleteSubjectConfirmation({ isOpen: false, subjectId: null })}
       />
+      <ConfirmationPopup
+      isOpen={deleteAccountConfirmation.isOpen}
+      message="Are you sure you want to delete your account? This action cannot be undone."
+      onConfirm={confirmDeleteAccount}
+      onCancel={() => setDeleteAccountConfirmation({ isOpen: false })}
+      className="delete-account-confirmation" 
+      />
       {folderOptionsMenu.isOpen && (
         <div 
           className="folder-options-menu"
           style={{
             position: 'absolute',
             top: `${folderOptionsMenu.top}px`,
-            left: '300px', // Adjust this value based on your sidebar width
+            left: '300px', 
             transform: 'translateY(-30%)',
           }}
           onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the menu

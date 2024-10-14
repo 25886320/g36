@@ -15,13 +15,19 @@ const getFoldersAndSubjects = async (req, res) => {
         f.id AS folder_id, 
         f.name AS folder_name, 
         s.id AS subject_id, 
-        s.name AS subject_name
+        s.name AS subject_name,
+        s.created_at AS subject_created_at,
+        COALESCE(MAX(n.updated_at), s.created_at) AS last_edit_date
       FROM 
         folders f
       LEFT JOIN 
         subjects s ON f.id = s.folder_id
+      LEFT JOIN 
+        notes n ON n.subject_id = s.id
       WHERE 
         f.owner_id = $1
+      GROUP BY 
+        f.id, s.id
       ORDER BY 
         f.name, s.name`,
       [ownerId]
@@ -38,7 +44,8 @@ const getFoldersAndSubjects = async (req, res) => {
       if (row.subject_id) {
         acc[row.folder_id].subjects.push({
           id: row.subject_id,
-          name: row.subject_name
+          name: row.subject_name,
+          lastEditDate: row.last_edit_date || row.subject_created_at
         });
       }
       return acc;
@@ -55,6 +62,11 @@ const createFolder = async (req, res) => {
   try {
     const { name } = req.body;
     const ownerId = req.user.id;
+
+    // Validate folder name
+    if (!name || name.trim() === '') {
+      return res.status(400).json({ message: 'Folder name is required' });
+    }
 
     const result = await pool.query(
       'INSERT INTO folders (name, owner_id) VALUES ($1, $2) RETURNING id, name',
@@ -99,7 +111,7 @@ const deleteFolder = async (req, res) => {
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Error deleting folder:', err);
-    res.status(500).json({ message: 'Error deleting folder', error: err.message });
+    res.status(500).json({ message: 'Error deleting folder' });
   } finally {
     client.release();
   }
@@ -129,19 +141,8 @@ const editFolder = async (req, res) => {
   } catch (err) {
     console.error('Error editing folder:', err);
 
-    // If it's the specific error about updated_at, we'll ignore it and return success
-    if (err.message.includes('column "updated_at" of relation "folders" does not exist')) {
-      return res.json({ id, name, owner_id: userId });
-    }
-
     res.status(500).json({ 
-      message: 'Error editing folder', 
-      error: err.message, 
-      stack: err.stack,
-      details: err.detail,
-      schema: err.schema,
-      table: err.table,
-      column: err.column
+      message: 'Error editing folder' 
     });
   }
 };

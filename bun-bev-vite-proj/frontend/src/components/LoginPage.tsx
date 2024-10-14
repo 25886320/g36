@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FaLock, FaEnvelope } from 'react-icons/fa';
+import { FaLock, FaEnvelope, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { Link, useNavigate } from 'react-router-dom';
 import '../styles/AuthPage.css';
 import api from '../services/api';
@@ -17,6 +17,7 @@ const LoginPage: React.FC<LoginPageProps & { showToast: (severity: 'success' | '
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -47,13 +48,20 @@ const LoginPage: React.FC<LoginPageProps & { showToast: (severity: 'success' | '
     }
   };
 
-  const handleForgotPassword = (e: React.FormEvent) => {
+  const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Password reset requested for:', forgotPasswordEmail);
-    // TODO: Implement actual password reset logic
-    setShowForgotPassword(false);
-    setForgotPasswordEmail('');
-    navigate('/home');
+    setLoading(true);
+    try {
+      const response = await api.resetPasswordRequest(forgotPasswordEmail);
+      showToast('success', 'Success', response.data.message);
+    } catch (error) {
+      console.error('Error requesting password reset:', error);
+      showToast('error', 'Error', 'Failed to send password reset email.');
+    } finally {
+      setLoading(false);
+      setShowForgotPassword(false);
+      setForgotPasswordEmail('');
+    }
   };
 
   return (
@@ -77,25 +85,32 @@ const LoginPage: React.FC<LoginPageProps & { showToast: (severity: 'success' | '
               <div className="input-group">
                 <FaLock className="input-icon" />
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="Type your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   className="input-field"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="password-toggle"
+                >
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
               </div>
 
               <div className="flex justify-between items-center mb-12 -mt-2">
                 {/* Remember me checkbox */}
                 <div className="flex items-center">
-                  <Checkbox inputId="rememberMe" className="p-checkbox ml-1" checked={rememberMe} onChange={(e) => setRememberMe(e.checked ?? false)} />
+                  <Checkbox inputId="rememberMe" className="p-checkbox ml-0 md:ml-1" checked={rememberMe} onChange={(e) => setRememberMe(e.checked ?? false)} />
                   <label className="ml-2 text-base text-black">Remember me</label>
                 </div>
                   
                 <button
                   type="button"
-                  className="link-button forgot-password-link text-base mr-1"
+                  className="link-button forgot-password-link text-base mr-0 md:mr-1"
                   onClick={() => setShowForgotPassword(true)}
                 >
                   Forgot password?

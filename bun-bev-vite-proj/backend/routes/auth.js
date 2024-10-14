@@ -96,4 +96,56 @@ router.post('/login', authController.loginUser);
  */
 router.get('/users/profile', authMiddleware, getUserProfile);
 
+/**
+ * @swagger
+ * /auth/request-password-reset:
+ *   post:
+ *     summary: Request a password reset
+ *     description: Sends a password reset email to the user.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password reset email sent
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/request-password-reset', authController.requestPasswordReset);
+
+/**
+ * @swagger
+ * /auth/reset-password:
+ *   post:
+ *     summary: Reset the password
+ *     description: Resets the user's password using a valid token.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               token:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password has been reset successfully
+ *       400:
+ *         description: Invalid or expired token
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/reset-password', authController.resetPassword);
+
 module.exports = router;

@@ -1,22 +1,26 @@
 const express = require('express');
-const multer = require('multer');
-const path = require('path');
+// const multer = require('multer');
+// const path = require('path');
 const authMiddleware = require('../middleware/auth');
 const { Pool } = require('pg');
-const { getUserProfile, getUserByEmail } = require('../controllers/userController');
+const { getUserProfile, getUserByEmail, deleteAccount, updateUsername, updateEmail, updateProfileImageUrl, checkEmailExists } = require('../controllers/userController');
 const router = express.Router();
 
+router.use(authMiddleware);
+
 // Set up multer for avatar uploads (if needed)
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '../uploads/avatars'));
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const filename = req.user.id + ext;
-    cb(null, filename);
-  }
-});
+// const storage = multer.diskStorage({
+//   destination: (req, file, cb) => {
+//     cb(null, path.join(__dirname, '../uploads/avatars'));
+//   },
+//   filename: (req, file, cb) => {
+//     const ext = path.extname(file.originalname);
+//     const filename = req.user.id + ext;
+//     cb(null, filename);
+//   }
+// });
+
+router.put('/profile-image', updateProfileImageUrl);
 
 /**
  * @swagger
@@ -45,7 +49,7 @@ const storage = multer.diskStorage({
  */
 router.get('/profile', getUserProfile);
 
-const upload = multer({ storage });
+// const upload = multer({ storage });
 
 /**
  * @swagger
@@ -144,7 +148,7 @@ const pool = new Pool({
  *       500:
  *         description: Internal server error
  */
-router.get('/data', authMiddleware, async (req, res) => {
+router.get('/data', async (req, res) => {
   try {
     const userId = req.user.id;
 
@@ -225,6 +229,114 @@ router.get('/data', authMiddleware, async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-router.get('/by-email/:email', authMiddleware, getUserByEmail);
+router.get('/by-email/:email', getUserByEmail);
+
+/**
+ * @swagger
+ * /users/account:
+ *   delete:
+ *     summary: Delete user account
+ *     description: Delete the authenticated user's account.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Account deleted successfully
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.delete('/account', authMiddleware, deleteAccount);
+
+/**
+ * @swagger
+ * /users/username:
+ *   put:
+ *     summary: Update user's username
+ *     description: Update the authenticated user's username.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Username updated successfully
+ *       400:
+ *         description: Invalid username
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.put('/username', authMiddleware, updateUsername);
+
+/**
+ * @swagger
+ * /users/email:
+ *   put:
+ *     summary: Update user's email
+ *     description: Update the authenticated user's email.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Email updated successfully
+ *       400:
+ *         description: Invalid email
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.put('/email', authMiddleware, updateEmail);
+
+/**
+ * @swagger
+ * /users/check-email:
+ *   post:
+ *     summary: Check if an email exists
+ *     description: Check if the provided email exists in the database.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Email check result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 exists:
+ *                   type: boolean
+ *       400:
+ *         description: Invalid request
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/check-email', checkEmailExists);
 
 module.exports = router;

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createNote, editNote, deleteNote, getAllNotes, updateNoteColor } = require('../controllers/noteController');
+const { createNote, editNote, deleteNote, getAllNotes, updateNoteColor, getNote } = require('../controllers/noteController');
 const authMiddleware = require('../middleware/auth');
 
 router.use(authMiddleware);
@@ -134,5 +134,11 @@ router.put('/:id/color', updateNoteColor);
  *         description: Internal server error
  */
 router.delete('/:id', deleteNote);
+
+/**
+ * @swagger
+ * TODO
+ */
+router.get('/:id', getNote);
 
 module.exports = router;

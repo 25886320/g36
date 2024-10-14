@@ -42,6 +42,11 @@ const addUserToNote = async (req, res) => {
   try {
     await client.query('BEGIN');
 
+    // Input validation
+    if (!email || !noteId) {
+      return res.status(400).json({ message: 'Email and note ID are required' });
+    }
+
     const userResult = await client.query('SELECT id FROM users WHERE email = $1', [email]);
     if (userResult.rows.length === 0) {
       return res.status(404).json({ message: 'User not found' });
@@ -63,7 +68,7 @@ const addUserToNote = async (req, res) => {
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Error adding user to note:', err);
-    res.status(500).json({ message: 'Error adding user to note', error: err.message });
+    res.status(500).json({ message: 'Error adding user to note' });
   } finally {
     client.release();
   }
@@ -72,10 +77,14 @@ const addUserToNote = async (req, res) => {
 const acceptInvite = async (req, res) => {
   const { noteId } = req.body;
   const userId = req.user.id;
+  if (!noteId) {
+    return res.status(400).json({ message: 'Note ID is required' });
+  }
 
   try {
     const noteResult = await pool.query(
-      `SELECT n.id, n.title, n.subject_id, n.folder_id, 
+      `SELECT n.id, n.title, n.content, n.subject_id, n.folder_id, 
+              n.owner_id,
               s.name AS subject_name, f.name AS folder_name
        FROM notes AS n
        LEFT JOIN subjects AS s ON n.subject_id = s.id
@@ -87,7 +96,7 @@ const acceptInvite = async (req, res) => {
       return res.status(404).json({ message: 'Note not found' });
     }
 
-    const { title, subject_name, folder_name, content } = noteResult.rows[0];
+    const { title, subject_name, folder_name, content, owner_id } = noteResult.rows[0];
 
     const createdAt = new Date().toISOString();
 
@@ -111,7 +120,7 @@ const acceptInvite = async (req, res) => {
     await pool.query(
       `INSERT INTO notes (title, content, owner_id, created_at, subject_id, folder_id) 
        VALUES ($1, $2, $3, $4, $5, $6)`,
-      [title, content, userId, createdAt, newSubjectId, newFolderId]
+      [title, content, owner_id, createdAt, newSubjectId, newFolderId]
     );
 
     // Mark the invite as accepted
@@ -125,7 +134,7 @@ const acceptInvite = async (req, res) => {
     res.status(200).json({ message: 'Invite accepted successfully' });
   } catch (error) {
     console.error('Error accepting invite:', error);
-    res.status(500).json({ message: 'Error accepting invite', error: error.message });
+    res.status(500).json({ message: 'Error accepting invite' });
   }
 };
 
@@ -151,9 +160,48 @@ const rejectInvite = async (req, res) => {
   }
 };
 
+const getUserRoleForNote = async (req, res) => {
+  const userId = req.user.id;
+  const { noteId } = req.params;
+
+  try {
+    // First, check if the user is the owner
+    const ownerResult = await pool.query(
+      `SELECT owner_id FROM notes WHERE id = $1`,
+      [noteId]
+    );
+
+    if (ownerResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Note not found' });
+    }
+
+    if (ownerResult.rows[0].owner_id === userId) {
+      return res.json({ role: 'owner' });
+    }
+
+    // If not owner, check user_notes table
+    const userNoteResult = await pool.query(
+      `SELECT editor FROM user_notes WHERE note_id = $1 AND user_id = $2`,
+      [noteId, userId]
+    );
+
+    if (userNoteResult.rows.length === 0) {
+      return res.status(403).json({ message: 'User has no access to this note' });
+    }
+
+    const role = userNoteResult.rows[0].editor ? 'editor' : 'viewer';
+    res.json({ role });
+
+  } catch (error) {
+    console.error('Error getting user role for note:', error);
+    res.status(500).json({ message: 'Error getting user role for note' });
+  }
+};
+
 module.exports = { 
   addUserToNote,
   getPendingInvites,
   acceptInvite,
-  rejectInvite
+  rejectInvite,
+  getUserRoleForNote
 };

@@ -17,6 +17,11 @@ const createNote = async (req, res) => {
   try {
     await client.query('BEGIN');
 
+    // Validate input
+    if (!title ||  !folderName || !subjectName) {
+      return res.status(400).json({ message: 'Title, folder name, and subject name are required.' });
+    }
+
     // Check if folder exists, if not create it
     let folderResult = await client.query('SELECT id FROM folders WHERE name = $1 AND owner_id = $2', [folderName, ownerId]);
     let folderId;
@@ -58,7 +63,7 @@ const createNote = async (req, res) => {
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Error creating note:', err);
-    res.status(500).json({ message: 'Error creating note', error: err.message });
+    res.status(500).json({ message: 'Error creating note' });
   } finally {
     client.release();
   }
@@ -70,12 +75,16 @@ const editNote = async (req, res) => {
   const userId = req.user.id;
 
   try {
-    // Check if the user is the owner or linked to the note
+    // Validate input
+    if (!title) {
+      return res.status(400).json({ message: 'Title is required.' });
+    }
+
     const result = await pool.query(
       `UPDATE notes 
        SET title = $1, content = $2, updated_at = NOW() 
        WHERE id = $3 AND (owner_id = $4 OR id IN (
-         SELECT note_id FROM user_notes WHERE user_id = $4
+         SELECT note_id FROM user_notes WHERE user_id = $4 AND editor = true
        )) 
        RETURNING *`,
       [title, content, id, userId]
@@ -88,13 +97,14 @@ const editNote = async (req, res) => {
     res.json(result.rows[0]);
   } catch (err) {
     console.error('Error editing note:', err);
-    res.status(500).json({ message: 'Error editing note', error: err.message });
+    res.status(500).json({ message: 'Error editing note' });
   }
 };
 
+
 const deleteNote = async (req, res) => {
   const { id } = req.params;
-  const userId = req.user.id; // Assuming you have middleware that sets req.user
+  const userId = req.user.id;
 
   try {
     // Check if the user is the owner or linked to the note
@@ -114,7 +124,7 @@ const deleteNote = async (req, res) => {
     res.json({ message: 'Note deleted successfully' });
   } catch (err) {
     console.error('Error deleting note:', err);
-    res.status(500).json({ message: 'Error deleting note', error: err });
+    res.status(500).json({ message: 'Error deleting note' });
   }
 };
 
@@ -123,7 +133,7 @@ const getAllNotes = async (req, res) => {
 
   try {
     const result = await pool.query(
-      `SELECT notes.*, folders.name AS folder_name, subjects.name AS subject_name 
+      `SELECT DISTINCT notes.*, folders.name AS folder_name, subjects.name AS subject_name 
        FROM notes 
        LEFT JOIN folders ON notes.folder_id = folders.id 
        LEFT JOIN subjects ON notes.subject_id = subjects.id 
@@ -141,7 +151,7 @@ const getAllNotes = async (req, res) => {
     res.json({ notes: result.rows });
   } catch (err) {
     console.error('Error fetching notes:', err);
-    res.status(500).json({ message: 'Error fetching notes', error: err.message });
+    res.status(500).json({ message: 'Error fetching notes' });
   }
 };
 
@@ -163,8 +173,39 @@ const updateNoteColor = async (req, res) => {
     res.json(result.rows[0]);
   } catch (err) {
     console.error('Error updating note color:', err);
-    res.status(500).json({ message: 'Error updating note color', error: err.message });
+    res.status(500).json({ message: 'Error updating note color' });
   }
 };
 
-module.exports = { createNote, editNote, deleteNote, getAllNotes, updateNoteColor };
+const getNote = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+
+  try {
+    const noteResult = await pool.query(
+      `SELECT notes.*, 
+          CASE 
+            WHEN notes.owner_id = $2 THEN true
+            WHEN un.editor = true THEN true
+            ELSE false
+          END AS can_edit
+       FROM notes
+       LEFT JOIN user_notes un ON un.note_id = notes.id AND un.user_id = $2
+       WHERE notes.id = $1`,
+      [id, userId]
+    );
+
+    if (noteResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Note not found or you do not have permission to view this note' });
+    }
+
+    const note = noteResult.rows[0];
+
+    res.json(note);
+  } catch (err) {
+    console.error('Error fetching note:', err);
+    res.status(500).json({ message: 'Error fetching note' });
+  }
+};
+
+module.exports = { createNote, editNote, deleteNote, getAllNotes, updateNoteColor, getNote };

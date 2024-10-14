@@ -11,7 +11,10 @@ const createSubject = async (req, res) => {
   try {
     const { name, folder_id } = req.body;
 
-    console.log('Attempting to create subject:', { name, folder_id });
+    // Input validation
+    if (!name || !folder_id) {
+      return res.status(400).json({ message: 'Name and folder ID are required' });
+    }
 
     // First, check if the folder belongs to the user
     const folderCheck = await pool.query(
@@ -33,11 +36,7 @@ const createSubject = async (req, res) => {
     res.status(201).json(newSubject);
   } catch (err) {
     console.error('Error creating subject:', err);
-    console.error('Error details:', err.message);
-    if (err.code) {
-      console.error('Error code:', err.code);
-    }
-    res.status(500).json({ message: 'Error creating subject', error: err.message });
+    res.status(500).json({ message: 'Error creating subject' });
   }
 };
 
@@ -45,6 +44,11 @@ const editSubject = async (req, res) => {
   const { id } = req.params;
   const { name } = req.body;
   const userId = req.user.id;
+
+  // Input validation
+  if (!name) {
+    return res.status(400).json({ message: 'Name is required' });
+  }
 
   try {
     const query = `
@@ -64,7 +68,7 @@ const editSubject = async (req, res) => {
     res.json(result.rows[0]);
   } catch (err) {
     console.error('Error editing subject:', err);
-    res.status(500).json({ message: 'Error editing subject', error: err.message });
+    res.status(500).json({ message: 'Error editing subject' });
   }
 };
 
@@ -100,7 +104,7 @@ const deleteSubject = async (req, res) => {
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Error deleting subject:', err);
-    res.status(500).json({ message: 'Error deleting subject', error: err.message });
+    res.status(500).json({ message: 'Error deleting subject' });
   } finally {
     client.release();
   }

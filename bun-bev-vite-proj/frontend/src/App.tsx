@@ -4,6 +4,7 @@ import LoginPage from './components/LoginPage';
 import SignUpPage from './components/SignUpPage';
 import HomePage from './components/HomePage';
 import NotePage from './components/Note';
+import ResetPasswordPage from './components/ResetPasswordPage';
 import { Toast } from 'primereact/toast';
 import { jwtDecode } from 'jwt-decode';
 
@@ -102,6 +103,7 @@ const App: React.FC = () => {
       <Routes>
         <Route path="/" element={<Navigate to="/home" />} />
         <Route path="/login" element={<UnprotectedRoute><LoginPage login={login} showToast={showToast} /></UnprotectedRoute>} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/signup" element={<UnprotectedRoute><SignUpPage showToast={showToast} /></UnprotectedRoute>} />
         <Route path="/home" element={<ProtectedRoute><HomePage logout={logout} showToast={showToast} /></ProtectedRoute>} />
         <Route path="/notes/:noteId" element={<ProtectedRoute><NotePage /></ProtectedRoute>} />

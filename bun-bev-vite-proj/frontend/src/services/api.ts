@@ -48,11 +48,6 @@ interface CreateSubjectData {
     folder_id: string;
 }
 
-// interface EditFolderData {
-//     name: string;
-//     content?: string;
-// }
-
 interface EditSubjectData {
     name: string;
 }
@@ -68,13 +63,12 @@ const api = {
     createNote: (noteData: NoteData) => {
         return apiClient.post('/notes', noteData);
     },
-    getUserData: () => {
+    getUserProfile: () => {
         return apiClient.get('/auth/users/profile');
     },
     getNotes: () => apiClient.get('/notes'),
     getFoldersAndSubjects: () => apiClient.get('/auth/folders'),
     createFolder: (name: string) => apiClient.post('/auth/folders', { name }),    
-    // Add this new function
     deleteNote: (noteId: string) => {
         return apiClient.delete(`/notes/${noteId}`);
     },
@@ -96,8 +90,20 @@ const api = {
     rejectInvite: (noteId: string) => {
         return apiClient.delete(`/auth/note-user/reject/${noteId}`);
     },
-    shareNote: (noteId: string, email: string, editor: boolean) => {
-        return apiClient.post('/auth/note-user', { noteId, email, editor });
+    shareNote: async (noteId: string, email: string, editor: boolean) => {
+        try {
+            console.log('Sharing note:', { noteId, email, editor });
+            const response = await apiClient.post('/auth/note-user', { noteId, email, editor });
+            console.log('Share note response:', response.data);
+            return response;
+        } catch (error) {
+            console.error('Error sharing note:', error);
+            if (axios.isAxiosError(error)) {
+                console.error('Error response:', error.response?.data);
+                console.error('Error status:', error.response?.status);
+            }
+            throw error;
+        }
     },
     getPendingInvites: () => {
         return apiClient.get('/auth/note-user/pending-invites');
@@ -132,16 +138,48 @@ const api = {
                 throw new Error("Failed to upload image: Unknown error");
             }
         }
+    },   
+    getUserRoleForNote: (noteId: string) => {
+        return apiClient.get(`/auth/note-user/role/${noteId}`);
     },
-    // TODO: Implement these functions
-    // updateProfileImage: async (imageUrl: string) => {
-    //     //TODO: Implement this function to set the string in the user document
-        
-    // },
-    // updateUsername: (username: string) => {
-    // },
-    // updateEmail: (email: string) => {
-    // },
+    updateProfileImage: async (imageUrl: string) => {
+        try {
+            return apiClient.put('auth/users/profile-image', { imageUrl });
+        } catch (error) {
+            console.error('Error updating profile image:', error);
+            throw error;
+        }
+    },
+    deleteAccount: () => {
+        return apiClient.delete('/auth/users/account');
+    },
+    updateUsername: (username: string) => {
+        return apiClient.put('/auth/users/username', { username });
+    },
+    updateEmail: (email: string) => {
+        return apiClient.put('/auth/users/email', { email });
+    },
+    resetPasswordRequest: (email: string) => {
+        return apiClient.post('/auth/request-password-reset', { email });
+    },
+    resetPassword: (token: string, newPassword: string) => {
+        return apiClient.post('/auth/reset-password', { token, newPassword });
+    },
+    checkEmailExists: async (email: string): Promise<boolean> => {
+        try {
+            console.log('Checking email existence for:', email);
+            const response = await apiClient.post('/auth/users/check-email', { email });
+            console.log('Email check response:', response.data);
+            return response.data.exists;
+        } catch (error) {
+            console.error('Error checking email existence:', error);
+            if (axios.isAxiosError(error)) {
+                console.error('Error response:', error.response?.data);
+                console.error('Error status:', error.response?.status);
+            }
+            throw error;
+        }
+    },
 };
 
 export default api;

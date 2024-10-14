@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FaUser, FaLock, FaEnvelope, FaInfoCircle } from 'react-icons/fa';
+import { FaUser, FaLock, FaEnvelope, FaEye, FaEyeSlash, FaInfoCircle } from 'react-icons/fa';
 import { Link, useNavigate } from 'react-router-dom';
 import '../styles/AuthPage.css';
 import api from '../services/api';
@@ -14,11 +14,18 @@ const SignUpPage: React.FC<SignUpPageProps> = ({ showToast }) => {
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (password !== confirmPassword) {
+      showToast('error', 'Password Mismatch', 'Passwords do not match. Please try again.');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -34,6 +41,7 @@ const SignUpPage: React.FC<SignUpPageProps> = ({ showToast }) => {
       setEmail('');
       setUsername('');
       setPassword('');
+      setConfirmPassword('');
 
       navigate('/login');
     } catch (error: unknown) {
@@ -75,21 +83,32 @@ const SignUpPage: React.FC<SignUpPageProps> = ({ showToast }) => {
               onChange={(e) => setUsername(e.target.value)}
               required
               className="input-field"
+              autoComplete="off"
             />
           </div>
           <div className="input-group">
-            <FaLock className="input-icon" />
-            <input
-              type="password"
-              placeholder="Create a password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="input-field"
-            />
+            <div style={{ position: 'relative', flex: 1 }}>
+              <FaLock className="input-icon" />
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Type your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="input-field"
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="password-toggle"
+              >
+                {showPassword ? <FaEyeSlash /> : <FaEye />}
+              </button>
+            </div>
             <FaInfoCircle
               id="passwordTooltip"
-              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"
+              className="info-icon"
               data-pr-tooltip="Password must contain at least: 
               - 8 characters
               - one uppercase letter
@@ -98,7 +117,19 @@ const SignUpPage: React.FC<SignUpPageProps> = ({ showToast }) => {
               - one symbol"
               data-pr-position="right"
             />
-            <Tooltip target="#passwordTooltip" className="ml-6" />
+            <Tooltip target="#passwordTooltip" />
+          </div>
+          <div className="input-group">
+            <FaLock className="input-icon" />
+            <input
+              type="password"
+              placeholder="Confirm your password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              className="input-field"
+              autoComplete="new-password"
+            />
           </div>
           {/* Sign Up Button with ProgressSpinner */}
           <button type="submit" className="auth-button" disabled={loading}>

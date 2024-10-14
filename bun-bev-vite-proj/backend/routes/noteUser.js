@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { addUserToNote, getPendingInvites, acceptInvite, rejectInvite } = require('../controllers/noteUserController');
+const { addUserToNote, getPendingInvites, acceptInvite, rejectInvite, getUserRoleForNote } = require('../controllers/noteUserController');
 const authMiddleware = require('../middleware/auth');
 
 router.use(authMiddleware);
@@ -121,5 +121,11 @@ router.post('/accept', acceptInvite);
  *         description: Internal server error
  */
 router.delete('/reject/:noteId', rejectInvite);
+
+/**
+ * @swagger
+ * TODO
+ */
+router.get('/note-user/role/:noteId', getUserRoleForNote);
 
 module.exports = router;

@@ -14,7 +14,7 @@ import {
   FaLevelDownAlt,
 } from 'react-icons/fa';
 import '../styles/Note.css';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
 import { Toast } from 'primereact/toast';
 import { Avatar } from 'primereact/avatar';
@@ -22,35 +22,75 @@ import { AvatarGroup } from 'primereact/avatargroup';
 import { Tooltip } from 'primereact/tooltip';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
+import { Button } from 'primereact/button';
+import { ProgressSpinner } from 'primereact/progressspinner';
 
 interface Note {
   id: string;
   title: string;
   content: string;
   updatedAt: string;
+  can_edit: boolean;
+  users: User[];
+}
+
+interface User {
+  id: string;
+  username: string;
+  email: string;
+  role: string; // 'owner', 'editor', or 'viewer'
+  avatar: string; // if available
 }
 
 const NotePage: React.FC = () => {
   const { noteId } = useParams<{ noteId: string }>();
-  const location = useLocation();
   const navigate = useNavigate();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const toast = useRef<Toast>(null);
 
   const [note, setNote] = useState<Note | null>(null);
+
+  // Only for preventing error
+  React.useEffect(() => { note && (() => {})(); }, [note]);
+
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [isPreview, setIsPreview] = useState(false);
+  const [canEdit, setCanEdit] = useState(false);
+  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
+  const [loadingNewNote, setLoadingNewNote] = useState(false);
 
-  // Dummy function to use note
-  const dummyUseNote = () => {
-    console.log(note);
-  };
+  // Dummy data for users
+  const [users, setUsers] = useState<User[]>([
+    {
+      id: '1',
+      username: 'John Doe',
+      email: 'john@example.com',
+      role: 'owner',
+      avatar: 'https://randomuser.me/api/portraits/men/1.jpg',
+    },
+    {
+      id: '2',
+      username: 'Jane Smith',
+      email: 'jane@example.com',
+      role: 'editor',
+      avatar: 'https://randomuser.me/api/portraits/women/2.jpg',
+    },
+    {
+      id: '3',
+      username: 'Bob Johnson',
+      email: 'bob@example.com',
+      role: 'viewer',
+      avatar: 'https://randomuser.me/api/portraits/men/3.jpg',
+    },
+  ]);
 
-  // Use the dummy function in a useEffect to avoid the "unused function" warning
-  useEffect(() => {
-    if (false) dummyUseNote();
-  }, [note]);
+  // Only for preventing error
+  React.useEffect(() => { setUsers(prev => prev); }, []);
+
+
+  const [currentUser] = useState<User | null>(null);
+
 
   const showToast = (
     severity:
@@ -69,46 +109,66 @@ const NotePage: React.FC = () => {
 
   useEffect(() => {
     const fetchNote = async () => {
-      if (location.state && location.state.note) {
-        const passedNote = location.state.note as Note;
-        setNote(passedNote);
-        setTitle(passedNote.title);
-        setContent(passedNote.content);
-      } else if (noteId) {
+      if (noteId) {
         try {
+          setLoadingNewNote(true);
           const response = await api.getNote(noteId);
           const fetchedNote = response.data;
           setNote(fetchedNote);
-          setTitle(fetchedNote.title);
-          setContent(fetchedNote.content);
+          setTitle(fetchedNote.title ?? '');
+          setContent(fetchedNote.content ?? '');
+          setCanEdit(fetchedNote.can_edit);
+
+          // Show permission dialog if the user does not have edit permissions
+          if (!fetchedNote.can_edit) {
+            setShowPermissionDialog(true);
+          }
         } catch (error) {
           console.error('Error fetching note:', error);
           showToast(
             'error',
-            'Edit failed.',
+            'Load failed.',
             'Failed to load note. Please try again.'
           );
+        } finally {
+          setLoadingNewNote(false);
         }
       }
     };
 
     fetchNote();
-  }, [noteId, location.state]);
+  }, [noteId]);
+
+  // If user cannot edit, always set isPreview to true
+  useEffect(() => {
+    if (!canEdit) {
+      setIsPreview(true);
+    }
+  }, [canEdit]);
 
   const handleSave = useCallback(async () => {
-    if (!noteId) return;
+    if (!noteId || !canEdit) {
+      if (!canEdit) {
+        setShowPermissionDialog(true); // Show dialog if user cannot edit
+      }
+      return;
+    }
     try {
       await api.editNote(noteId, { title, content });
-      navigate('/home');
+      showToast(
+        'success',
+        'Note saved',
+        'Your note has been saved successfully.'
+      );
     } catch (error) {
       console.error('Error saving note:', error);
       showToast(
         'error',
-        'Edit failed.',
+        'Save failed',
         'Failed to save note. Please try again.'
       );
     }
-  }, [noteId, title, content, navigate]);
+  }, [noteId, title, content, canEdit]);
 
   const handleBack = () => {
     navigate('/home');
@@ -122,7 +182,7 @@ const NotePage: React.FC = () => {
     if (textareaRef.current) {
       const textarea = textareaRef.current;
       const { selectionStart, selectionEnd, value } = textarea;
-      let selectedText = value.substring(selectionStart, selectionEnd);
+      const selectedText = value.substring(selectionStart, selectionEnd);
       let newText = '';
       let syntax = '';
 
@@ -178,60 +238,22 @@ const NotePage: React.FC = () => {
     }
   };
 
-  // Updated dummy data for users
-  const [users, setUsers] = useState([
-    {
-      id: 1,
-      name: 'John Pork',
-      email: 'john@example.com',
-      role: 'owner',
-      avatar: 'https://randomuser.me/api/portraits/men/1.jpg',
-    },
-    {
-      id: 2,
-      name: 'Jane Smith',
-      email: 'jane@example.com',
-      role: 'editor',
-      avatar: 'https://randomuser.me/api/portraits/women/2.jpg',
-    },
-    {
-      id: 3,
-      name: 'Bob Johnson',
-      email: 'bob@example.com',
-      role: 'viewer',
-      avatar: 'https://randomuser.me/api/portraits/men/3.jpg',
-    },
-    {
-      id: 4,
-      name: 'Alice Brown',
-      email: 'alice@example.com',
-      role: 'editor',
-      avatar: 'https://randomuser.me/api/portraits/women/4.jpg',
-    },
-    {
-      id: 5,
-      name: 'Charlie Wilson',
-      email: 'charlie@example.com',
-      role: 'viewer',
-      avatar: 'https://randomuser.me/api/portraits/men/5.jpg',
-    },
-  ]);
-  const [currentUser, setCurrentUser] = useState(users[1]); // Assuming the current user is Jane Smith
-
-  // Dummy function to use setUsers and setCurrentUser
-  const dummyUpdate = () => {
-    setUsers((prevUsers) => prevUsers);
-    setCurrentUser((prevUser) => prevUser);
+  const handleCloseDialog = () => {
+    setShowPermissionDialog(false);
   };
-
-  // Use the dummy function in a useEffect to avoid the "unused function" warning
-  useEffect(() => {
-    if (false) dummyUpdate();
-  }, []);
 
   return (
     <div className="note-page">
       <Toast ref={toast} />
+      {loadingNewNote && (
+        <div className="fixed inset-0 flex items-center justify-center bg-opacity-40 bg-gray-400 z-50">
+          <ProgressSpinner
+            style={{ width: '70px', height: '70px' }}
+            strokeWidth="4"
+            animationDuration="2s"
+          />
+        </div>
+      )}
       <div className="note-header">
         <button className="icon-button back-button" onClick={handleBack}>
           <FaArrowLeft /> Back
@@ -242,24 +264,36 @@ const NotePage: React.FC = () => {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Note Title"
+          disabled={!canEdit}
         />
-        <button className="icon-button save-button" onClick={handleSave}>
-          <FaSave /> Save
-        </button>
-        <button className="icon-button preview-button" onClick={togglePreview}>
-          {isPreview ? (
-            <>
-              <FaEdit /> Edit
-            </>
-          ) : (
-            <>
-              <FaEye /> Preview
-            </>
-          )}
-        </button>
+        {canEdit && (
+          <button className="icon-button save-button" onClick={handleSave}>
+            <FaSave /> Save
+          </button>
+        )}
+        {/* Show toggle button only if user can edit */}
+        {canEdit && (
+          <button
+            className="icon-button preview-button"
+            onClick={togglePreview}
+          >
+            {isPreview ? (
+              <>
+                <FaEdit /> Edit
+              </>
+            ) : (
+              <>
+                <FaEye /> Preview
+              </>
+            )}
+          </button>
+        )}
       </div>
-      {!isPreview && (
+
+      {/* Show toolbar only if user can edit and is not in preview mode */}
+      {canEdit && !isPreview && (
         <div className="custom-toolbar">
+          {/* Toolbar buttons */}
           <button
             className="toolbar-button"
             onClick={() => handleFormat('heading1')}
@@ -315,7 +349,7 @@ const NotePage: React.FC = () => {
             <FaLevelDownAlt />
           </button>
 
-          {/* Updated AvatarGroup for all users */}
+          {/* User Avatars */}
           <div className="user-avatars">
             <Tooltip
               target=".user-avatars-group"
@@ -329,7 +363,7 @@ const NotePage: React.FC = () => {
                     shape="circle"
                     size="normal"
                   />
-                  <span>{user.name}</span>
+                  <span>{user.username}</span>
                   <span className="user-role">{user.role}</span>
                 </div>
               ))}
@@ -355,16 +389,16 @@ const NotePage: React.FC = () => {
             </AvatarGroup>
           </div>
 
-          {/* Add current user avatar */}
+          {/* Current User Avatar */}
           <div className="current-user-avatar">
             <Tooltip target=".current-user-avatar-img" position="bottom">
               <div>
-                <p>{currentUser.name}</p>
-                <p>Role: {currentUser.role}</p>
+                <p>{currentUser?.username ?? 'Unknown User'}</p>
+                <p>Role: {currentUser?.role ?? 'N/A'}</p>
               </div>
             </Tooltip>
             <Avatar
-              image={currentUser.avatar}
+              image={currentUser?.avatar}
               shape="circle"
               size="large"
               className="current-user-avatar-img"
@@ -387,9 +421,28 @@ const NotePage: React.FC = () => {
             onChange={(e) => setContent(e.target.value)}
             placeholder="Start writing your note here..."
             className="markdown-textarea"
+            disabled={!canEdit}
           />
         )}
       </div>
+
+      {showPermissionDialog && (
+        <div className="custom-popup-overlay">
+          <div className="custom-popup">
+            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+              <p>You don't have editing permissions for this note.</p>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: '10px' }}>
+              <Button
+                label="OK"
+                onClick={handleCloseDialog}
+                className="p-button-text"
+                style={{ backgroundColor: '#2196F3', color: '#ffffff', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px' }} // Blue background
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
