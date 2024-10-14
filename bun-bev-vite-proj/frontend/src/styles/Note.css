@@ -1,0 +1,606 @@
+/* Note Page Styles */
+.note-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--background-light);
+}
+
+.note-header {
+  display: flex;
+  align-items: center;
+  padding: 1rem 2rem;
+  background-color: var(--white);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.icon-button {
+  display: flex;
+  align-items: center;
+  background-color: var(--accent);
+  color: var(--white);
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem; /* Smaller font size */
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  margin-right: 0.5rem;
+}
+
+.icon-button:hover {
+  background-color: var(--primary-dark);
+}
+
+.icon-button svg {
+  margin-right: 0.5rem;
+}
+
+.note-title-input {
+  flex-grow: 1;
+  margin: 0 1rem;
+  padding: 0.5rem 1rem;
+  font-size: 1.2rem; /* Smaller font size */
+  border: 2px solid var(--background-light);
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.note-title-input:focus {
+  border-color: var(--accent);
+}
+
+.custom-toolbar {
+  display: flex;
+  align-items: center;
+  background-color: var(--white);
+  padding: 0.5rem 2rem;
+  border-bottom: 1px solid var(--background-light);
+  overflow-x: auto;
+}
+
+.toolbar-button {
+  background: none;
+  border: none;
+  color: var(--text-dark);
+  font-size: 1rem; /* Smaller font size */
+  cursor: pointer;
+  margin-right: 0.5rem;
+  transition: color 0.3s, background-color 0.3s;
+  padding: 0.5rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.toolbar-button:hover {
+  background-color: var(--background-light);
+}
+
+.toolbar-button svg {
+  margin-right: 0.25rem;
+}
+
+.note-editor {
+  flex-grow: 1;
+  padding: 1rem 2rem;
+  overflow-y: auto;
+}
+
+.markdown-textarea {
+  width: 100%;
+  resize: none;
+  padding: 1rem;
+  font-size: 1rem;
+  border: 1px solid var(--background-light);
+  border-radius: 8px;
+  outline: none;
+  height: calc(100vh - 200px);
+}
+
+.markdown-preview {
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid var(--background-light);
+  border-radius: 8px;
+  overflow-y: auto;
+  height: calc(100vh - 200px);
+  background-color: var(--white);
+}
+
+.markdown-preview img {
+  max-width: 100%;
+  height: auto;
+}
+
+@media (max-width: 768px) {
+  .note-header {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0.5rem 1rem; /* Reduce padding */
+  }
+
+  .icon-button-container {
+    display: flex; /* Use flexbox to align buttons horizontally */
+    flex-wrap: wrap; /* Allow wrapping if needed */
+    justify-content: flex-start; /* Align buttons to the start */
+    gap: 0.5rem; /* Add space between buttons */
+  }
+
+  .icon-button {
+    flex: 0 1 auto; /* Allow buttons to shrink and grow */
+    padding: 0.1rem 0.4rem; /* Smaller padding */
+    font-size: 0.8rem; /* Smaller font size */
+    margin-top: 0.2rem;
+  }
+
+  .note-title-input {
+    margin: 0.5rem 0;
+    font-size: 1rem; /* Smaller font size */
+  }
+
+  .custom-toolbar {
+    padding: 0.5rem 1rem;
+    flex-wrap: wrap;
+  }
+
+  .toolbar-button {
+    font-size: 0.8rem; /* Smaller font size */
+    padding: 0.2rem; /* Smaller padding */
+  }
+
+  .note-editor {
+    padding: 0.5rem 1rem; /* Reduce padding */
+  }
+
+  .user-avatars {
+    margin-left: auto;
+    margin-top: 0.5rem;
+  }
+
+  .current-user-avatar {
+    margin-left: auto;
+    margin-top: 0.5rem;
+  }
+  
+  .user-avatars .p-avatar {
+    width: 40px; /* Set a smaller width */
+    height: 40px; /* Set a smaller height */
+    font-size: 0.8rem; /* Adjust font size if avatars have text */
+  }
+  
+  .user-avatars-group .p-avatar {
+    width: 40px; /* Smaller width for grouped avatars */
+    height: 40px; /* Smaller height for grouped avatars */
+    font-size: 0.7rem; /* Adjust font size for grouped avatars */
+  }
+
+  .current-user-avatar .p-avatar {
+    width: 40px; /* Set a smaller width */
+    height: 40px; /* Set a smaller height */
+    font-size: 0.8rem; /* Adjust font size if avatars have text */
+  }
+  
+  .current-user-avatar .p-avatar {
+    width: 40px; /* Smaller width for grouped avatars */
+    height: 40px; /* Smaller height for grouped avatars */
+    font-size: 0.7rem; /* Adjust font size for grouped avatars */
+  }
+
+  .p-toast {
+    padding: 0.5rem; /* Reduce padding */
+    font-size: 0.9rem; /* Smaller font size */
+    max-width: 300px; /* Reduce max width */
+  }
+
+  .markdown-textarea,
+  .markdown-preview {
+    height: calc(100vh - 250px); /* Adjust height for smaller screens */
+  }
+}
+
+/* User Avatars */
+.user-avatars {
+  margin-left: auto;
+}
+
+.user-avatars-group {
+  cursor: pointer;
+}
+
+.user-avatars-group .p-avatar {
+  margin-left: -0.5rem;
+  border: 2px solid var(--white);
+  transition: transform 0.3s ease;
+}
+
+.user-avatars-group .p-avatar:hover {
+  transform: translateY(-3px);
+}
+
+.user-avatars-tooltip {
+  max-width: 250px;
+}
+
+.user-tooltip-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.user-tooltip-item .p-avatar {
+  margin-right: 0.5rem;
+}
+
+.user-tooltip-item span {
+  margin-right: 0.5rem;
+}
+
+.user-role {
+  font-size: 0.8rem;
+  color: var(--text-light);
+}
+
+/* Current User Avatar */
+.current-user-avatar {
+  margin-left: 1rem;
+}
+
+.current-user-avatar-img {
+  cursor: pointer;
+  border: 2px solid var(--accent);
+  transition: transform 0.3s ease;
+}
+
+.current-user-avatar-img:hover {
+  transform: scale(1.1);
+}
+
+/* Adjust toolbar layout for smaller screens */
+@media (max-width: 768px) {
+  .custom-toolbar {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .user-avatars {
+    margin-top: 0.5rem;
+    margin-left: 0;
+  }
+}
+/* Styles for markdown content */
+
+/* Headings */
+.markdown-preview h1 {
+  font-size: 2em;
+  margin: 0.67em 0;
+  font-weight: bold;
+}
+
+.markdown-preview h2 {
+  font-size: 1.5em;
+  margin: 0.75em 0;
+  font-weight: bold;
+}
+
+.markdown-preview h3 {
+  font-size: 1.17em;
+  margin: 0.83em 0;
+  font-weight: bold;
+}
+
+.markdown-preview h4 {
+  font-size: 1em;
+  margin: 1.12em 0;
+  font-weight: bold;
+}
+
+.markdown-preview h5 {
+  font-size: 0.83em;
+  margin: 1.5em 0;
+  font-weight: bold;
+}
+
+.markdown-preview h6 {
+  font-size: 0.67em;
+  margin: 1.67em 0;
+  font-weight: bold;
+}
+
+/* Paragraphs */
+.markdown-preview p {
+  margin: 1em 0;
+  line-height: 1.6;
+}
+
+/* Blockquotes */
+.markdown-preview blockquote {
+  margin: 1em 0;
+  padding-left: 1em;
+  border-left: 4px solid #ccc;
+  color: #666;
+  font-style: italic;
+}
+
+/* Code Blocks */
+.markdown-preview pre {
+  background-color: #f6f8fa;
+  padding: 1em;
+  overflow: auto;
+  border-radius: 5px;
+  margin: 1em 0;
+}
+
+.markdown-preview pre code {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.95em;
+  line-height: 1.4;
+}
+
+/* Inline Code */
+.markdown-preview code {
+  background-color: #f6f8fa;
+  border-radius: 3px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.95em;
+}
+
+/* Emphasis */
+.markdown-preview em {
+  font-style: italic;
+}
+
+.markdown-preview strong {
+  font-weight: bold;
+}
+
+.markdown-preview del {
+  text-decoration: line-through;
+}
+
+/* Links */
+.markdown-preview a {
+  color: #0366d6;
+  text-decoration: none;
+}
+
+.markdown-preview a:hover {
+  text-decoration: underline;
+}
+
+/* Images */
+.markdown-preview img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 1em 0;
+}
+
+/* Unordered Lists */
+.markdown-preview ul {
+  list-style-type: disc;
+  margin: 1em 0;
+  padding-left: 2em;
+}
+
+.markdown-preview ul ul {
+  list-style-type: circle;
+}
+
+.markdown-preview ul ul ul {
+  list-style-type: square;
+}
+
+/* Ordered Lists */
+.markdown-preview ol {
+  list-style-type: decimal;
+  margin: 1em 0;
+  padding-left: 2em;
+}
+
+.markdown-preview ol ol {
+  list-style-type: lower-alpha;
+}
+
+.markdown-preview ol ol ol {
+  list-style-type: lower-roman;
+}
+
+/* List Items */
+.markdown-preview li {
+  margin-bottom: 0.5em;
+}
+
+/* Horizontal Rules */
+.markdown-preview hr {
+  border: none;
+  border-top: 1px solid #ccc;
+  margin: 2em 0;
+}
+
+/* Tables */
+.markdown-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+}
+
+.markdown-preview th,
+.markdown-preview td {
+  border: 1px solid #ccc;
+  padding: 0.5em 1em;
+  text-align: left;
+}
+
+.markdown-preview th {
+  background-color: #f6f8fa;
+  font-weight: bold;
+}
+
+/* Blockquote within blockquote */
+.markdown-preview blockquote blockquote {
+  margin-left: 1em;
+  padding-left: 1em;
+  border-left: 4px solid #ddd;
+}
+
+/* Task Lists */
+.markdown-preview ul.task-list,
+.markdown-preview ol.task-list {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+.markdown-preview li.task-list-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5em;
+}
+
+.markdown-preview li.task-list-item input[type="checkbox"] {
+  margin-right: 0.5em;
+}
+
+/* Footnotes */
+.markdown-preview sup {
+  font-size: 0.8em;
+  vertical-align: super;
+}
+
+/* Definition Lists */
+.markdown-preview dl {
+  margin: 1em 0;
+}
+
+.markdown-preview dt {
+  font-weight: bold;
+}
+
+.markdown-preview dd {
+  margin-left: 1em;
+  margin-bottom: 0.5em;
+}
+
+/* Abbreviations */
+.markdown-preview abbr[title] {
+  border-bottom: 1px dotted #666;
+  cursor: help;
+}
+
+/* Highlighted Text */
+.markdown-preview mark {
+  background-color: #ff0;
+}
+
+/* Quotes within Paragraphs */
+.markdown-preview q {
+  quotes: "“" "”" "‘" "’";
+}
+
+.markdown-preview q::before {
+  content: open-quote;
+}
+
+.markdown-preview q::after {
+  content: close-quote;
+}
+
+/* Keyboard Input */
+.markdown-preview kbd {
+  display: inline-block;
+  padding: 0.2em 0.4em;
+  font-size: 0.85em;
+  line-height: 1.4;
+  color: #444d56;
+  vertical-align: middle;
+  background-color: #fafbfc;
+  border: 1px solid #d1d5da;
+  border-radius: 3px;
+  box-shadow: inset 0 -1px 0 #d1d5da;
+}
+
+/* Subscript and Superscript */
+.markdown-preview sub {
+  font-size: 0.8em;
+  vertical-align: sub;
+}
+
+.markdown-preview sup {
+  font-size: 0.8em;
+  vertical-align: super;
+}
+
+/* Emoji */
+.markdown-preview img.emoji {
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.1em;
+}
+
+/* Line Breaks */
+.markdown-preview br {
+  display: block;
+  content: "";
+  margin: 0.5em 0;
+}
+
+/* Captions */
+.markdown-preview figcaption {
+  text-align: center;
+  font-size: 0.9em;
+  color: #666;
+  margin-top: 0.5em;
+}
+
+/* Figures */
+.markdown-preview figure {
+  margin: 1em 0;
+  text-align: center;
+}
+
+/* Adjustments for Mobile View */
+@media (max-width: 768px) {
+  .markdown-preview {
+    padding: 1em;
+  }
+
+  .markdown-preview table,
+  .markdown-preview pre {
+    overflow-x: auto;
+  }
+}
+
+
+.p-dialog .p-button {
+  margin: 0;
+  padding: 0.5rem 1rem;
+  background-color: transparent;
+  color: #000000;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  transition: background-color 0.3s;
+} 
+
+.custom-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5); 
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.custom-popup {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  padding: 20px;
+  width: 300px;
+  text-align: center;
+}
