@@ -93,7 +93,7 @@ wss.on('connection', (ws) => {
 });
 
 // Start the HTTP server and WebSocket server on the same port
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
   console.log(`\nBackend server is running on ${chalk.cyan(`http://localhost:${PORT}`)}`);
   console.log(`Swagger documentation is available at ${chalk.cyan(`http://localhost:${PORT}/api-docs`)}`);
