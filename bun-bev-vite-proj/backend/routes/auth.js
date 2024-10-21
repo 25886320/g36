@@ -126,7 +126,7 @@ router.post('/request-password-reset', authController.requestPasswordReset);
  * /auth/reset-password:
  *   post:
  *     summary: Reset the password
- *     description: Resets the user's password using a valid token.
+ *     description: Resets the user's password.
  *     requestBody:
  *       required: true
  *       content:

@@ -30,14 +30,39 @@ app.use('/auth/subjects', subjectRoutes);
 app.use('/auth/note-user', noteUserRoutes);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
-// Create a server using the HTTP module
 const server = http.createServer(app);
-
-// Create a WebSocket server and attach it to the HTTP server
 const wss = new WebSocket.Server({ server });
 
-// Track connected users by email
+// Users currently logged in
 const users = new Map();
+const wsToEmail = new Map();
+
+// Users working on a note
+const activeUsersByNote = new Map();
+
+// Notify all users in the note about the updated list of active users, excluding themselves
+const notifyAllUsersInNote = (noteId) => {
+  const usersInNote = activeUsersByNote.get(noteId);
+
+  if (!usersInNote) return;
+
+  usersInNote.forEach((userEmail) => {
+    const userSocket = users.get(userEmail);
+    if (userSocket && userSocket.readyState === WebSocket.OPEN) {
+      const otherUsers = Array.from(usersInNote).filter((email) => email !== userEmail);
+
+      userSocket.send(
+        JSON.stringify({
+          type: 'currentUsers',
+          noteId,
+          users: otherUsers,
+        })
+      );
+
+      console.log(`Notified ${userEmail} about other users in the note:`, otherUsers);
+    }
+  });
+};
 
 // Handle WebSocket connections
 wss.on('connection', (ws) => {
@@ -49,7 +74,8 @@ wss.on('connection', (ws) => {
     if (data.type === 'register') {
       // Register a user by email when they connect
       users.set(data.email, ws);
-      console.log(`${data.email} registered for real-time updates`);
+      wsToEmail.set(ws, data.email);
+      console.log(`${data.email} registered for live notifications`);
 
       // Log all currently registered users
       console.log('Current registered users:');
@@ -58,41 +84,113 @@ wss.on('connection', (ws) => {
       });
     }
 
+    if (data.type === 'joinNote') {
+      const { noteId, email } = data;
+      users.set(data.email, ws);
+
+      if (!activeUsersByNote.has(noteId)) {
+        activeUsersByNote.set(noteId, new Set());
+      }
+
+      const usersInNote = activeUsersByNote.get(noteId);
+      usersInNote.add(email);
+      wsToEmail.set(ws, email);
+      console.log(`User ${email} joined note ${noteId}`);
+
+      // Notify other users in the note
+      usersInNote.forEach((userEmail) => {
+        if (userEmail !== email) {
+          const userSocket = users.get(userEmail);
+          if (userSocket && userSocket.readyState === WebSocket.OPEN) {
+            userSocket.send(
+              JSON.stringify({
+                type: 'userJoined',
+                noteId,
+                email,
+              })
+            );
+          }
+        }
+      });
+
+      notifyAllUsersInNote(noteId);
+
+      // Log all users currently working on the note
+      console.log(`Current users in note ${noteId}:`, Array.from(usersInNote));
+    }
+
     if (data.type === 'share') {
-      const { sharedEmail, noteId, sharedBy } = data; // Include 'sharedBy'
+      const { sharedEmail, noteId, sharedBy } = data;
       const recipientSocket = users.get(sharedEmail);
 
       if (recipientSocket && recipientSocket.readyState === WebSocket.OPEN) {
         recipientSocket.send(
           JSON.stringify({
             type: 'notification',
-            message: `${sharedBy} has shared a note with you.`, // Updated message
+            message: `${sharedBy} has shared a note with you.`,
           })
         );
+      }
+    }
+
+    // Handle note updates (real-time collaboration)
+    if (data.type === 'noteUpdate') {
+      const { noteId, updatedContent, updatedBy } = data;
+
+      // Notify other users in the note with the updated content
+      const usersInNote = activeUsersByNote.get(noteId);
+      if (usersInNote) {
+        usersInNote.forEach((userEmail) => {
+          if (userEmail !== updatedBy) {
+            const userSocket = users.get(userEmail);
+            if (userSocket && userSocket.readyState === WebSocket.OPEN) {
+              userSocket.send(
+                JSON.stringify({
+                  type: 'noteContentUpdate',
+                  noteId,
+                  updatedContent,
+                  updatedBy,
+                })
+              );
+            }
+          }
+        });
       }
     }
   });
 
   // Handle disconnection
   ws.on('close', () => {
-    // Remove user on disconnect
-    for (let [email, socket] of users.entries()) {
-      if (socket === ws) {
-        users.delete(email);
-        break;
-      }
+    const email = [...users.entries()].find(([, socket]) => socket === ws)?.[0];
+    if (email) {
+      console.log(`Client disconnected: ${email}`);
+      users.delete(email);
+
+      // Remove user from active notes
+      activeUsersByNote.forEach((usersInNote, noteId) => {
+        if (usersInNote.has(email)) {
+          usersInNote.delete(email);
+          console.log(`User ${email} left note ${noteId}`);
+
+          notifyAllUsersInNote(noteId);
+
+          if (usersInNote.size === 0) {
+            activeUsersByNote.delete(noteId);
+          }
+        }
+      });
+    } else {
+      console.log('Email not found for disconnected socket');
     }
-    console.log('Client disconnected');
 
     // Log all currently registered users
-    console.log('Current registered users:');
+    console.log('Current live notification users:');
     users.forEach((_, email) => {
       console.log(email);
     });
   });
 });
 
-// Start the HTTP server and WebSocket server on the same port
 const PORT = process.env.PORT || 8000;
 server.listen(PORT, () => {
   console.log(`\nBackend server is running on ${chalk.cyan(`http://localhost:${PORT}`)}`);

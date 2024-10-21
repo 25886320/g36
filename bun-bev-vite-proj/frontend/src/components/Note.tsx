@@ -12,6 +12,7 @@ import {
   FaEye,
   FaEdit,
   FaLevelDownAlt,
+  FaVolumeUp, // Importing a speaker icon for the text-to-speech button
 } from 'react-icons/fa';
 import '../styles/Note.css';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -47,11 +48,137 @@ const NotePage: React.FC = () => {
   const navigate = useNavigate();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const toast = useRef<Toast>(null);
-
   const [note, setNote] = useState<Note | null>(null);
+  const [username, setUsername] = useState<string>('User');
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
+  const [role, setRole] = useState<string | null>(null);
 
-  // Only for preventing error
-  React.useEffect(() => { note && (() => {})(); }, [note]);
+  // Function to handle content change
+  const handleContentChange = (newContent: string) => {
+    setContent(newContent); // Update the content directly
+
+    // Send updated content to WebSocket server
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN && note) {
+      socketRef.current.send(
+        JSON.stringify({
+          type: 'noteUpdate',
+          noteId: note.id,
+          updatedContent: newContent,
+          updatedBy: userEmail,
+        })
+      );
+    }
+  };
+
+  const socketRef = useRef<WebSocket | null>(null);
+
+  useEffect(() => {
+  const fetchUserRole = async () => {
+    if (noteId) {
+      try {
+        const response = await api.getUserRole(noteId);
+        setRole(response.data.role);
+        console.log('User role:', response.data.role);
+      } catch (error) {
+        console.error('Error fetching user role:', error);
+      }
+    }
+  };
+
+  fetchUserRole();
+}, [noteId]);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const response = await api.getUserProfile();
+        setUserEmail(response.data.email);
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
+
+  useEffect(() => {
+    // Establish WebSocket connection
+    if (userEmail && noteId) {
+      socketRef.current = new WebSocket('ws://localhost:8000');
+
+      socketRef.current.onopen = () => {
+        console.log('Connected to WebSocket server');
+        if (noteId) {
+          socketRef.current?.send(
+            JSON.stringify({
+              type: 'joinNote',
+              noteId: noteId,
+              email: userEmail,
+            })
+          );
+          console.log(`User ${userEmail} joined note ${noteId}`);
+        }
+      };
+
+      socketRef.current.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === 'userJoined') {
+          console.log(`User ${data.email} joined note ${data.noteId}`);
+        }
+
+        if (data.type === 'currentUsers') {
+          console.log(`Current users on note ${data.noteId}:`, data.users);
+
+          if (data.users && data.users.length > 0) {
+            api.getUserDetailsByEmails(data.noteId, data.users)
+              .then((response) => {
+
+                const updatedUsers: User[] = response.data.map((user: any) => {
+
+                  const updatedUser = {
+                    id: user.id,
+                    username: user.username,
+                    email: user.email,
+                    role: user.role,
+                    avatar: user.avatar,
+                  };
+
+                  return updatedUser;
+                });
+
+                setUsers(updatedUsers);
+              })
+              .catch((error) => {
+                console.error('Error fetching user details:', error);
+              });
+          } else {
+            console.log('No users currently in the note.');
+            setUsers([]);
+          }
+        }
+
+        if (data.type === 'noteContentUpdate') {
+          console.log(`Note content updated by ${data.updatedBy}`);
+          setContent(data.updatedContent);
+        }
+      };
+
+      socketRef.current.onerror = (error) => {
+        console.error('WebSocket error:', error);
+      };
+
+      socketRef.current.onclose = () => {
+        console.log('Disconnected from WebSocket server');
+      };
+
+      return () => {
+        if (socketRef.current) {
+          socketRef.current.close();
+        }
+      };
+    }
+  }, [userEmail, noteId]);
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -59,53 +186,7 @@ const NotePage: React.FC = () => {
   const [canEdit, setCanEdit] = useState(false);
   const [showPermissionDialog, setShowPermissionDialog] = useState(false);
   const [loadingNewNote, setLoadingNewNote] = useState(false);
-
-  // Dummy data for users
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: '1',
-      username: 'John Doe',
-      email: 'john@example.com',
-      role: 'owner',
-      avatar: 'https://randomuser.me/api/portraits/men/1.jpg',
-    },
-    {
-      id: '2',
-      username: 'Jane Smith',
-      email: 'jane@example.com',
-      role: 'editor',
-      avatar: 'https://randomuser.me/api/portraits/women/2.jpg',
-    },
-    {
-      id: '3',
-      username: 'Bob Johnson',
-      email: 'bob@example.com',
-      role: 'viewer',
-      avatar: 'https://randomuser.me/api/portraits/men/3.jpg',
-    },
-  ]);
-
-  // Only for preventing error
-  React.useEffect(() => { setUsers(prev => prev); }, []);
-
-
-  const [currentUser] = useState<User | null>(null);
-
-
-  const showToast = (
-    severity:
-      | 'success'
-      | 'info'
-      | 'warn'
-      | 'error'
-      | 'secondary'
-      | 'contrast'
-      | undefined,
-    summary: string,
-    detail: string
-  ) => {
-    toast.current?.show({ severity, summary, detail });
-  };
+  const [users, setUsers] = useState<User[]>([]);
 
   useEffect(() => {
     const fetchNote = async () => {
@@ -119,10 +200,15 @@ const NotePage: React.FC = () => {
           setContent(fetchedNote.content ?? '');
           setCanEdit(fetchedNote.can_edit);
 
+          const currentProfile = await api.getUserProfile();
+          setUsername(currentProfile.data.username ?? 'User');
+          setProfileImageUrl(currentProfile.data.avatar_url || null);
+
           // Show permission dialog if the user does not have edit permissions
           if (!fetchedNote.can_edit) {
             setShowPermissionDialog(true);
           }
+
         } catch (error) {
           console.error('Error fetching note:', error);
           showToast(
@@ -139,17 +225,31 @@ const NotePage: React.FC = () => {
     fetchNote();
   }, [noteId]);
 
-  // If user cannot edit, always set isPreview to true
   useEffect(() => {
     if (!canEdit) {
       setIsPreview(true);
     }
   }, [canEdit]);
 
+  const showToast = (
+    severity:
+      | 'success'
+      | 'info'
+      | 'warn'
+      | 'error'
+      | 'secondary'
+      | 'contrast'
+      | undefined,
+    summary: string,
+    detail: string
+  ) => {
+    toast.current?.show({ severity, summary, detail });
+  };
+
   const handleSave = useCallback(async () => {
     if (!noteId || !canEdit) {
       if (!canEdit) {
-        setShowPermissionDialog(true); // Show dialog if user cannot edit
+        setShowPermissionDialog(true);
       }
       return;
     }
@@ -196,7 +296,6 @@ const NotePage: React.FC = () => {
           newText = syntax + selectedText + syntax;
           break;
         case 'underline':
-          // Markdown doesn't support underline, using HTML tags
           newText = '<u>' + selectedText + '</u>';
           break;
         case 'strike':
@@ -216,7 +315,6 @@ const NotePage: React.FC = () => {
           newText = selectedText.replace(/^(\s*)(.*)$/gm, '$1- $2');
           break;
         case 'newline':
-          // Insert two newline characters to create a new paragraph
           newText = '  \n';
           break;
         default:
@@ -229,7 +327,6 @@ const NotePage: React.FC = () => {
 
       setContent(updatedValue);
 
-      // Update the cursor position
       setTimeout(() => {
         const cursorPosition = selectionStart + newText.length;
         textarea.selectionStart = textarea.selectionEnd = cursorPosition;
@@ -240,6 +337,16 @@ const NotePage: React.FC = () => {
 
   const handleCloseDialog = () => {
     setShowPermissionDialog(false);
+  };
+
+  // Text-to-Speech handler
+  const handleTextToSpeech = () => {
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(content);
+      window.speechSynthesis.speak(utterance);
+    } else {
+      showToast('warn', 'Text-to-Speech not supported', 'Your browser does not support text-to-speech functionality.');
+    }
   };
 
   return (
@@ -271,7 +378,6 @@ const NotePage: React.FC = () => {
             <FaSave /> Save
           </button>
         )}
-        {/* Show toggle button only if user can edit */}
         {canEdit && (
           <button
             className="icon-button preview-button"
@@ -288,69 +394,45 @@ const NotePage: React.FC = () => {
             )}
           </button>
         )}
+
+        {/* Text-to-Speech button */}
+        <button className="icon-button tts-button" onClick={handleTextToSpeech}>
+          <FaVolumeUp /> Read Aloud
+        </button>
       </div>
 
-      {/* Show toolbar only if user can edit and is not in preview mode */}
       {canEdit && !isPreview && (
         <div className="custom-toolbar">
-          {/* Toolbar buttons */}
-          <button
-            className="toolbar-button"
-            onClick={() => handleFormat('heading1')}
-          >
+          <button className="toolbar-button" onClick={() => handleFormat('heading1')}>
             <FaHeading /> H1
           </button>
-          <button
-            className="toolbar-button"
-            onClick={() => handleFormat('heading2')}
-          >
+          <button className="toolbar-button" onClick={() => handleFormat('heading2')}>
             <FaHeading /> H2
           </button>
-          <button
-            className="toolbar-button"
-            onClick={() => handleFormat('bold')}
-          >
+          <button className="toolbar-button" onClick={() => handleFormat('bold')}>
             <FaBold />
           </button>
-          <button
-            className="toolbar-button"
-            onClick={() => handleFormat('italic')}
-          >
+          <button className="toolbar-button" onClick={() => handleFormat('italic')}>
             <FaItalic />
           </button>
-          <button
-            className="toolbar-button"
-            onClick={() => handleFormat('underline')}
-          >
+          <button className="toolbar-button" onClick={() => handleFormat('underline')}>
             <FaUnderline />
           </button>
-          <button
-            className="toolbar-button"
-            onClick={() => handleFormat('strike')}
-          >
+          <button className="toolbar-button" onClick={() => handleFormat('strike')}>
             <FaStrikethrough />
           </button>
-          <button
-            className="toolbar-button"
-            onClick={() => handleFormat('list-ordered')}
-          >
+          <button className="toolbar-button" onClick={() => handleFormat('list-ordered')}>
             <FaListOl />
           </button>
-          <button
-            className="toolbar-button"
-            onClick={() => handleFormat('list-unordered')}
-          >
+          <button className="toolbar-button" onClick={() => handleFormat('list-unordered')}>
             <FaListUl />
           </button>
-          <button
-            className="toolbar-button"
-            onClick={() => handleFormat('newline')}
-          >
+          <button className="toolbar-button" onClick={() => handleFormat('newline')}>
             <FaLevelDownAlt />
           </button>
 
           {/* User Avatars */}
-          <div className="user-avatars">
+          <div className="user-avatars flex">
             <Tooltip
               target=".user-avatars-group"
               position="bottom"
@@ -360,6 +442,8 @@ const NotePage: React.FC = () => {
                 <div key={user.id} className="user-tooltip-item">
                   <Avatar
                     image={user.avatar}
+                    icon={"pi pi-user"}
+                    className="w-10 h-10 rounded-full cursor-pointer object-cover overflow-hidden"
                     shape="circle"
                     size="normal"
                   />
@@ -373,6 +457,8 @@ const NotePage: React.FC = () => {
                 <Avatar
                   key={user.id}
                   image={user.avatar}
+                  icon={"pi pi-user"}
+                  className="w-12 h-12 rounded-full cursor-pointer object-cover overflow-hidden"
                   shape="circle"
                   size="large"
                   style={{ display: index < 3 ? 'inline-flex' : 'none' }}
@@ -382,6 +468,7 @@ const NotePage: React.FC = () => {
                 <Avatar
                   label={`+${users.length - 3}`}
                   shape="circle"
+                  className="w-12 h-12 rounded-full cursor-pointer object-cover overflow-hidden"
                   size="large"
                   style={{ backgroundColor: '#9c27b0', color: '#ffffff' }}
                 />
@@ -390,18 +477,19 @@ const NotePage: React.FC = () => {
           </div>
 
           {/* Current User Avatar */}
-          <div className="current-user-avatar">
+          <div className="current-user-avatar flex">
             <Tooltip target=".current-user-avatar-img" position="bottom">
-              <div>
-                <p>{currentUser?.username ?? 'Unknown User'}</p>
-                <p>Role: {currentUser?.role ?? 'N/A'}</p>
+              <div className='text-base'>
+                <p>{username || 'Unknown User'}</p>
+                <p className="text-xs">{role || "none"}</p>
               </div>
             </Tooltip>
             <Avatar
-              image={currentUser?.avatar}
+              image={profileImageUrl || undefined}
+              icon={"pi pi-user"}
+              className="current-user-avatar-img w-12 h-12 rounded-full cursor-pointer object-cover overflow-hidden"
               shape="circle"
               size="large"
-              className="current-user-avatar-img"
             />
           </div>
         </div>
@@ -418,7 +506,7 @@ const NotePage: React.FC = () => {
           <textarea
             ref={textareaRef}
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={(e) => handleContentChange(e.target.value)}
             placeholder="Start writing your note here..."
             className="markdown-textarea"
             disabled={!canEdit}
@@ -437,7 +525,7 @@ const NotePage: React.FC = () => {
                 label="OK"
                 onClick={handleCloseDialog}
                 className="p-button-text"
-                style={{ backgroundColor: '#2196F3', color: '#ffffff', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px' }} // Blue background
+                style={{ backgroundColor: '#2196F3', color: '#ffffff', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px' }} 
               />
             </div>
           </div>

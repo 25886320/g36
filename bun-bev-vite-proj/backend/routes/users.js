@@ -3,22 +3,44 @@ const express = require('express');
 // const path = require('path');
 const authMiddleware = require('../middleware/auth');
 const { Pool } = require('pg');
-const { getUserProfile, getUserByEmail, deleteAccount, updateUsername, updateEmail, updateProfileImageUrl, checkEmailExists } = require('../controllers/userController');
+const { getUserProfile, getUserByEmail, deleteAccount, updateUsername, updateEmail, updateProfileImageUrl, checkEmailExists, getUserDetailsByEmails, getUserRole } = require('../controllers/userController');
 const router = express.Router();
 
-router.use(authMiddleware);
 
-// Set up multer for avatar uploads (if needed)
-// const storage = multer.diskStorage({
-//   destination: (req, file, cb) => {
-//     cb(null, path.join(__dirname, '../uploads/avatars'));
-//   },
-//   filename: (req, file, cb) => {
-//     const ext = path.extname(file.originalname);
-//     const filename = req.user.id + ext;
-//     cb(null, filename);
-//   }
-// });
+
+/**
+ * @swagger
+ * /users/check-email:
+ *   post:
+ *     summary: Check if an email exists
+ *     description: Check if the provided email exists in the database.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Email check result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 exists:
+ *                   type: boolean
+ *       400:
+ *         description: Invalid request
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/check-email', checkEmailExists);
+
+router.use(authMiddleware);
 
 router.put('/profile-image', updateProfileImageUrl);
 
@@ -27,7 +49,7 @@ router.put('/profile-image', updateProfileImageUrl);
  * /users/profile:
  *   get:
  *     summary: Get user profile
- *     description: Retrieve profile information of authenticated user.
+ *     description: Retrieve profile information of a user.
  *     responses:
  *       200:
  *         description: Profile information
@@ -43,13 +65,11 @@ router.put('/profile-image', updateProfileImageUrl);
  *                 email:
  *                   type: string
  *       401:
- *         description: Unauthorized
+ *         description: Unauthorised
  *       500:
  *         description: Internal server error
  */
 router.get('/profile', getUserProfile);
-
-// const upload = multer({ storage });
 
 /**
  * @swagger
@@ -75,17 +95,11 @@ router.get('/profile', getUserProfile);
  *       400:
  *         description: No file uploaded
  *       401:
- *         description: Unauthorized
+ *         description: Unauthorised
  *       500:
  *         description: Internal server error
  */
-// Route to handle avatar upload
-// router.post('/upload-avatar', authenticateToken, upload.single('avatar'), (req, res) => {
-//   if (!req.file) {
-//     return res.status(400).json({ message: 'No file uploaded' });
-//   }
-//   // Handle successful upload
-// });
+
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -144,7 +158,7 @@ const pool = new Pool({
  *                                     type: string
  *                                     format: date-time
  *       401:
- *         description: Unauthorized
+ *         description: Unauthorised
  *       500:
  *         description: Internal server error
  */
@@ -223,7 +237,7 @@ router.get('/data', async (req, res) => {
  *                 email:
  *                   type: string
  *       401:
- *         description: Unauthorized
+ *         description: Unauthorised
  *       404:
  *         description: User not found
  *       500:
@@ -236,14 +250,14 @@ router.get('/by-email/:email', getUserByEmail);
  * /users/account:
  *   delete:
  *     summary: Delete user account
- *     description: Delete the authenticated user's account.
+ *     description: Delete the user's account.
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Account deleted successfully
  *       401:
- *         description: Unauthorized
+ *         description: Unauthorised
  *       500:
  *         description: Internal server error
  */
@@ -254,7 +268,7 @@ router.delete('/account', authMiddleware, deleteAccount);
  * /users/username:
  *   put:
  *     summary: Update user's username
- *     description: Update the authenticated user's username.
+ *     description: Update the user's username.
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -272,7 +286,7 @@ router.delete('/account', authMiddleware, deleteAccount);
  *       400:
  *         description: Invalid username
  *       401:
- *         description: Unauthorized
+ *         description: Unauthorised
  *       500:
  *         description: Internal server error
  */
@@ -283,7 +297,7 @@ router.put('/username', authMiddleware, updateUsername);
  * /users/email:
  *   put:
  *     summary: Update user's email
- *     description: Update the authenticated user's email.
+ *     description: Update the user's email.
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -301,7 +315,7 @@ router.put('/username', authMiddleware, updateUsername);
  *       400:
  *         description: Invalid email
  *       401:
- *         description: Unauthorized
+ *         description: Unauthorised
  *       500:
  *         description: Internal server error
  */
@@ -309,10 +323,10 @@ router.put('/email', authMiddleware, updateEmail);
 
 /**
  * @swagger
- * /users/check-email:
+ * /users/getUserDetailsByEmails:
  *   post:
- *     summary: Check if an email exists
- *     description: Check if the provided email exists in the database.
+ *     summary: Get user details by multiple emails
+ *     description: Retrieve user information for multiple emails.
  *     requestBody:
  *       required: true
  *       content:
@@ -320,23 +334,65 @@ router.put('/email', authMiddleware, updateEmail);
  *           schema:
  *             type: object
  *             properties:
- *               email:
+ *               emails:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: User details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                   username:
+ *                     type: string
+ *                   email:
+ *                     type: string
+ *       400:
+ *         description: Invalid input
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/getUserDetailsByEmails', (req, res) => {
+  getUserDetailsByEmails(req, res);
+});
+
+/**
+ * @swagger
+ * /users/getUserRole:
+ *   post:
+ *     summary: Get user role
+ *     description: Retrieve the role of the user.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
  *                 type: string
  *     responses:
  *       200:
- *         description: Email check result
+ *         description: User role retrieved successfully
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 exists:
- *                   type: boolean
+ *                 role:
+ *                   type: string
  *       400:
- *         description: Invalid request
+ *         description: Invalid input
  *       500:
  *         description: Internal server error
  */
-router.post('/check-email', checkEmailExists);
+router.post('/getUserRole', getUserRole);
 
 module.exports = router;

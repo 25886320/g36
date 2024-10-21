@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom'; // Import useNavigate
+import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { Toast } from 'primereact/toast'; // Import Toast
+import { Toast } from 'primereact/toast';
 import '../styles/ResetPasswordPage.css';
 
 const ResetPasswordPage: React.FC = () => {
@@ -11,7 +11,7 @@ const ResetPasswordPage: React.FC = () => {
     const query = new URLSearchParams(useLocation().search);
     const token = query.get('token');
     const toast = React.useRef<Toast>(null);
-    const navigate = useNavigate(); // Initialize useNavigate
+    const navigate = useNavigate();
 
     const handleResetPassword = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -22,11 +22,17 @@ const ResetPasswordPage: React.FC = () => {
             }
             const response = await api.resetPassword(token, newPassword);
             setMessage(response.data.message);
-            toast.current?.show({ severity: 'success', summary: 'Success', detail: response.data.message }); // Show success toast
-        } catch (error) {
+            toast.current?.show({ severity: 'success', summary: 'Success', detail: response.data.message });
+        } catch (error: unknown) {
             console.error('Error resetting password:', error);
+
+            const err = error as { response?: { status: number, data: { message: string } } };
             setMessage('Failed to reset password.');
-            toast.current?.show({ severity: 'error', summary: 'Error', detail: 'Failed to reset password.' }); // Show error toast
+            if (err.response && err.response.status === 400) {
+                toast.current?.show({ severity: 'error', summary: 'Error', detail: err.response.data.message });
+            } else {
+                toast.current?.show({ severity: 'error', summary: 'Error', detail: 'Failed to reset password.' });
+            }
         } finally {
             setLoading(false);
         }
@@ -36,7 +42,7 @@ const ResetPasswordPage: React.FC = () => {
         <div className="reset-password-container">
             <Toast ref={toast} className="rounded-lg" />
             <div className="reset-password-box">
-                <h2>Reset Password for Notes BLVD</h2>
+                <h2>Reset Password</h2>
                 <form onSubmit={handleResetPassword}>
                     <input
                         type="password"

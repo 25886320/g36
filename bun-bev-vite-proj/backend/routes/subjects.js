@@ -28,7 +28,7 @@ router.use(authMiddleware);
  *       400:
  *         description: Invalid input
  *       401:
- *         description: Unauthorized
+ *         description: Unauthorised
  *       500:
  *         description: Internal server error
  */
@@ -62,7 +62,7 @@ router.post('/', createSubject);
  *       400:
  *         description: Invalid input
  *       401:
- *         description: Unauthorized
+ *         description: Unauthorised
  *       404:
  *         description: Subject not found
  *       500:

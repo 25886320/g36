@@ -67,6 +67,7 @@ const api = {
         return apiClient.get('/auth/users/profile');
     },
     getNotes: () => apiClient.get('/notes'),
+    getShareNotes: () => apiClient.get('/notes/shared-notes'),
     getFoldersAndSubjects: () => apiClient.get('/auth/folders'),
     createFolder: (name: string) => apiClient.post('/auth/folders', { name }),    
     deleteNote: (noteId: string) => {
@@ -179,6 +180,12 @@ const api = {
             }
             throw error;
         }
+    },
+    getUserDetailsByEmails: (noteId: string, emails: string[]) => {
+        return apiClient.post('/auth/users/getUserDetailsByEmails', { noteId, emails });
+    },
+    getUserRole: (noteId: string) => {
+        return apiClient.post('/auth/users/getUserRole', { noteId });
     },
 };
 

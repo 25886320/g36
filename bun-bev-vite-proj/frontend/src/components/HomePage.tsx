@@ -10,6 +10,8 @@ import { Badge } from 'primereact/badge';
 import { Button } from 'primereact/button';
 import { Skeleton } from 'primereact/skeleton';
 import { ProgressSpinner } from 'primereact/progressspinner';
+import FocusTrap from 'focus-trap-react';
+
 
 interface HomePageProps {
   logout: () => void;
@@ -63,6 +65,8 @@ interface ErrorPopupProps {
     subjectName?: string;
     folder_name?: string;
     subject_name?: string;
+    folderId?: string;   
+    subjectId?: string;  
     color: string;
 }
   
@@ -122,56 +126,77 @@ const ShareNotePopup: React.FC<ShareNotePopupProps> = ({ isOpen, onClose, onShar
 
   return (
     <div className="popup-overlay">
-      <div className="popup">
-        <h2 className="popup-title">Share Note</h2>
-        <form onSubmit={handleSubmit}>
-          <input
-            type="email"
-            placeholder="Enter email address"
-            value={shareUserEmail}
-            onChange={(e) => setShareUserEmail(e.target.value)}
-            required
-            autoFocus
-            className="share-input"
-          />
-          <div className="permission-select">
-            <div className="permission-options">
-              <label 
-                className={`permission-option ${!isEditor ? 'selected' : ''}`}
-                onClick={() => handlePermissionChange(false)}
-              >
-                <input
-                  type="radio"
-                  name="permission"
-                  value="viewer"
-                  checked={!isEditor}
-                  onChange={() => {}}
-                  className="permission-radio"
-                />
-                <span className="permission-label">Viewer</span>
-              </label>
-              <label 
-                className={`permission-option ${isEditor ? 'selected' : ''}`}
-                onClick={() => handlePermissionChange(true)}
-              >
-                <input
-                  type="radio"
-                  name="permission"
-                  value="editor"
-                  checked={isEditor}
-                  onChange={() => {}}
-                  className="permission-radio"
-                />
-                <span className="permission-label">Editor</span>
-              </label>
+      <FocusTrap>
+        <div className="popup">
+          <h2 className="popup-title">Share Note</h2>
+          <form onSubmit={handleSubmit}>
+            {/* Email Input Field */}
+            <input
+              type="email"
+              placeholder="Enter email address"
+              value={shareUserEmail}
+              onChange={(e) => setShareUserEmail(e.target.value)}
+              required
+              autoFocus
+              className="share-input"
+              tabIndex={0}  // Email input in tab order
+            />
+
+            {/* Permission Radio Buttons */}
+            <div className="permission-select">
+              <div className="permission-options">
+                {/* Viewer Option */}
+                <label 
+                  className={`permission-option ${!isEditor ? 'selected' : ''}`}
+                  tabIndex={0}  // Ensure label is focusable
+                  onClick={() => handlePermissionChange(false)}
+                  onKeyPress={(e) => e.key === 'Enter' && handlePermissionChange(false)}
+                >
+                  <input
+                    type="radio"
+                    name="permission"
+                    value="viewer"
+                    checked={!isEditor}
+                    onChange={() => handlePermissionChange(false)}
+                    className="permission-radio"
+                    tabIndex={-1}  // The radio itself does not need to be tabbable
+                  />
+                  <span className="permission-label">Viewer</span>
+                </label>
+
+                {/* Editor Option */}
+                <label 
+                  className={`permission-option ${isEditor ? 'selected' : ''}`}
+                  tabIndex={0}  // Ensure label is focusable
+                  onClick={() => handlePermissionChange(true)}
+                  onKeyPress={(e) => e.key === 'Enter' && handlePermissionChange(true)}
+                >
+                  <input
+                    type="radio"
+                    name="permission"
+                    value="editor"
+                    checked={isEditor}
+                    onChange={() => handlePermissionChange(true)}
+                    className="permission-radio"
+                    tabIndex={-1}  // The radio itself does not need to be tabbable
+                  />
+                  <span className="permission-label">Editor</span>
+                </label>
+              </div>
             </div>
-          </div>
-          <div className="popup-buttons">
-            <button type="submit" className="share-button">Share</button>
-            <button type="button" onClick={onClose} className="cancel-button">Cancel</button>
-          </div>
-        </form>
-      </div>
+
+            {/* Action Buttons */}
+            <div className="popup-buttons">
+              <button type="submit" className="share-button" tabIndex={0}>
+                Share
+              </button>
+              <button type="button" onClick={onClose} className="cancel-button" tabIndex={0}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </FocusTrap>
     </div>
   );
 };
@@ -255,6 +280,7 @@ const NewNotePopup: React.FC<NewNotePopupProps> = ({ isOpen, onClose, onSubmit, 
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
+            autoFocus
           />
           <input
             type="text"
@@ -311,25 +337,32 @@ const NewSubjectPopup: React.FC<NewSubjectPopupProps> = ({ isOpen, onClose, onSu
   };
 
   return (
-    <div className="popup-overlay">
-      <div className="popup">
-        <h2 className="popup-title">Add New Subject</h2>
-        <form onSubmit={handleSubmit}>
-          <input
-            type="text"
-            placeholder="Subject Name"
-            value={subjectName}
-            onChange={(e) => setSubjectName(e.target.value)}
-            required
-            autoFocus
-          />
-          <div className="popup-buttons">
-            <button type="submit" className="create-button">Add</button>
-            <button type="button" onClick={onClose} className="cancel-button">Cancel</button>
-          </div>
-        </form>
+    <FocusTrap>
+      <div className="popup-overlay" onClick={onClose}>
+        <div className="popup" onClick={(e) => e.stopPropagation()}>
+          <h2 className="popup-title">Add New Subject</h2>
+          <form onSubmit={handleSubmit}>
+            <input
+              type="text"
+              placeholder="Subject Name"
+              value={subjectName}
+              onChange={(e) => setSubjectName(e.target.value)}
+              required
+              autoFocus
+              tabIndex={0} // Ensure input is focusable
+            />
+            <div className="popup-buttons">
+              <button type="submit" className="create-button" tabIndex={0}>
+                Add
+              </button>
+              <button type="button" onClick={onClose} className="cancel-button" tabIndex={0}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
+    </FocusTrap>
   );
 };
 
@@ -347,15 +380,10 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
   const [isSharingNotePopupOpen, setIsSharingNotePopupOpen] = useState(false);
   const [shareNoteId, setShareNoteId] = useState<string | null>(null);
   const [isSidebarVisible, setIsSidebarVisible] = useState<boolean>(true);
-
-
-  //const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [errorPopup, setErrorPopup] = useState<{ isOpen: boolean; message: string }>({ isOpen: false, message: '' });
   const navigate = useNavigate();
   const [isSortOpen, setIsSortOpen] = useState(false);
-  //const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  // const [showProfileOptions, setShowProfileOptions] = useState(false);
   const [notes, setNotes] = useState<Note[]>([]);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{ isOpen: boolean; noteId: string | null }>({ isOpen: false, noteId: null });  
   const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
@@ -378,10 +406,12 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
   const [loading, setLoading] = useState(true);
   const [categorySearchTerm, setCategorySearchTerm] = useState<string>('');
 
+  //const [isLoadingNotes, setIsLoadingNotes] = useState(true);
+
   const socketRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    // Establish WebSocket connection only once when the component mounts
+    // Establish WebSocket connection
     socketRef.current = new WebSocket('ws://localhost:8000');
 
     socketRef.current.onopen = () => {
@@ -391,7 +421,6 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
     socketRef.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data.type === 'notification') {
-        // Show the notification using Toast
         showToast('info', 'New Note Shared', data.message || 'New note has been shared');
         fetchSharedNotes();
       }
@@ -405,7 +434,7 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
       console.log('Disconnected from WebSocket server');
     };
 
-    // Close the WebSocket connection when the component unmounts
+    // Close the WebSocket connection
     return () => {
       if (socketRef.current) {
         socketRef.current.close();
@@ -449,18 +478,12 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
   const [deleteSubjectConfirmation, setDeleteSubjectConfirmation] = useState<{ isOpen: boolean; subjectId: string | null }>({ isOpen: false, subjectId: null });
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [editingSubjectId, setEditingSubjectId] = useState<string | null>(null);
-  //const [editingUsername, setEditingUsername] = useState(false);
-  //const [editingEmail, setEditingEmail] = useState(false);
   const [deleteAccountConfirmation, setDeleteAccountConfirmation] = useState({ isOpen: false });
 
-  //const handleDeleteAccount = () => {
-  //  setDeleteAccountConfirmation({ isOpen: true });
-  //};
-  
   const confirmDeleteAccount = async () => {
     try {
-      logout();
       await api.deleteAccount();
+      logout();
       showToast('success', 'Account Deleted', 'Your account has been successfully deleted.');
     } catch (error) {
       console.error('Error deleting account:', error);
@@ -515,6 +538,7 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
 
   const handleEditFolder = (folderId: string) => {
     setEditingFolderId(folderId);
+    setFolderOptionsMenu({ isOpen: false, folderId: null, top: 0 });
   };
 
   const toggleSidebar = () => {
@@ -558,15 +582,17 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
       showToast('error', 'Error', 'Subject name cannot be empty');
       return;
     }
-
+  
     const currentSubject = selectedFolder?.subjects.find(subject => subject.id === subjectId);
     if (currentSubject && currentSubject.name === newName) {
       setEditingSubjectId(null);
       return;
     }
-
+  
     try {
       await api.editSubject(subjectId, { name: newName });
+      
+      // Update folders state
       setFolders(prevFolders =>
         prevFolders.map(folder => ({
           ...folder,
@@ -575,6 +601,37 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
           )
         }))
       );
+      
+      // Update selectedFolder if necessary
+      if (selectedFolder) {
+        setSelectedFolder(prevFolder => {
+          if (prevFolder && typeof prevFolder === 'object' && 'subjects' in prevFolder) {
+            return {
+              ...prevFolder,
+              subjects: prevFolder.subjects.map(subject =>
+                subject.id === subjectId ? { ...subject, name: newName } : subject
+              ),
+            };
+          } else {
+            // Return prevFolder as is if it's not the expected object
+            return prevFolder;
+          }
+        });
+      }
+      
+      // Update currentView if it's the edited subject
+      if (typeof currentView !== 'string' && currentView.id === subjectId) {
+        setCurrentView((prevView) => {
+          if (typeof prevView === 'object' && prevView !== null) {
+            return {
+              ...prevView,
+              name: newName // Update the name property
+            };
+          }
+          return prevView; // Return unchanged if prevView is not valid
+        });
+      }
+      
       setEditingSubjectId(null);
       showToast('info', 'Subject Updated', 'Subject name updated successfully');
     } catch (error) {
@@ -596,12 +653,72 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
     }
   
     try {
+
+      const userRoleResponse = await api.getUserRole(noteId);
+      const userRole = userRoleResponse.data.role;
+
+      if (userRole !== 'owner') {
+        showToast('error', 'Error', 'Only owners can rename notes.');
+        setEditingNoteId(null);
+        return;
+      }
+
       await api.editNote(noteId, { title: newTitle, content: '' });
+      
+      // Update notes state
       setNotes(prevNotes =>
         prevNotes.map(note =>
           note.id === noteId ? { ...note, title: newTitle } : note
         )
       );
+      
+      // Update folders state
+      setFolders(prevFolders =>
+        prevFolders.map(folder => ({
+          ...folder,
+          subjects: folder.subjects.map(subject => ({
+            ...subject,
+            notes: subject.notes.map(note =>
+              note.id === noteId ? { ...note, title: newTitle } : note
+            )
+          }))
+        }))
+      );
+      
+    // Update currentView if it's a subject view
+    if (typeof currentView !== 'string' && currentView.notes) {
+      setCurrentView(prevView => {
+        if (typeof prevView !== 'string') {
+          return {
+            ...prevView,
+            notes: prevView.notes.map(note =>
+              note.id === noteId ? { ...note, title: newTitle } : note
+            )
+          };
+        } else {
+          // Handle the case where prevView is a string, if necessary
+          return prevView;
+        }
+      });
+    }
+      
+      // Update selectedSubject if necessary
+      if (selectedSubject) {
+        setSelectedSubject(prevSubject => {
+          if (prevSubject && typeof prevSubject === 'object' && 'notes' in prevSubject) {
+            return {
+              ...prevSubject,
+              notes: prevSubject.notes.map(note =>
+                note.id === noteId ? { ...note, title: newTitle } : note
+              ),
+            };
+          } else {
+            // Return prevSubject as is if it's not the expected object
+            return prevSubject;
+          }
+        });
+      }
+      
       setEditingNoteId(null);
       showToast('info', 'Note Updated', 'Note title updated successfully');
     } catch (error) {
@@ -633,6 +750,14 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
 
   const handleColorChange = async (noteId: string, color: string) => {
     try {
+      const userRoleResponse = await api.getUserRole(noteId);
+      const userRole = userRoleResponse.data.role;
+
+      if (userRole !== 'owner') {
+        showToast('error', 'Error', 'Only owners can change colors.');
+        return;
+      }
+
       await api.updateNoteColor(noteId, color);
       setNotes(prevNotes =>
         prevNotes.map(note =>
@@ -662,6 +787,7 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
 
   const handleDeleteFolder = (folderId: string) => {
     setDeleteCategoryConfirmation({ isOpen: true, folderId });
+    setFolderOptionsMenu({ isOpen: false, folderId: null, top: 0 });
   };
 
   const handleDeleteSubject = (subjectId: string) => {
@@ -674,7 +800,19 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
         setDeleteCategoryConfirmation({ isOpen: false, folderId: null });
         setLoadingNewNote(true);
         await api.deleteFolder(deleteCategoryConfirmation.folderId);
+        
+        // Update folders state
         setFolders(prevFolders => prevFolders.filter(folder => folder.id !== deleteCategoryConfirmation.folderId));
+        
+        // Update currentView if necessary
+        if (currentView === 'folder' && selectedFolder?.id === deleteCategoryConfirmation.folderId) {
+          setCurrentView('all');
+          setSelectedFolder(null);
+        }
+        
+        // Update notes state to remove notes from the deleted category
+        setNotes(prevNotes => prevNotes.filter(note => note.folderId !== deleteCategoryConfirmation.folderId));
+        
         showToast('info', 'Category Deleted', 'Category deleted successfully');
       } catch (err) {
         console.error('Error deleting category:', err);
@@ -691,13 +829,40 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
         setDeleteSubjectConfirmation({ isOpen: false, subjectId: null });
         setLoadingNewNote(true);
         await api.deleteSubject(deleteSubjectConfirmation.subjectId);
+        
+        // Update folders state
         setFolders(prevFolders => 
           prevFolders.map(folder => ({
             ...folder,
             subjects: folder.subjects.filter(subject => subject.id !== deleteSubjectConfirmation.subjectId)
           }))
         );
-        showToast('info', 'Deleted Subject', 'Subject deleted successfully');
+        
+        // Update selectedFolder if necessary
+        if (selectedFolder) {
+          setSelectedFolder(prevFolder => {
+            if (prevFolder && typeof prevFolder === 'object' && 'subjects' in prevFolder) {
+              return {
+                ...prevFolder,
+                subjects: prevFolder.subjects.filter(
+                  subject => subject.id !== deleteSubjectConfirmation.subjectId
+                ),
+              };
+            } else {
+              return prevFolder;
+            }
+          });
+        }
+        
+        // Update currentView if necessary
+        if (typeof currentView !== 'string' && currentView.id === deleteSubjectConfirmation.subjectId) {
+          setCurrentView('folder');
+        }
+        
+        // Update notes state to remove notes from the deleted subject
+        setNotes(prevNotes => prevNotes.filter(note => note.subjectId !== deleteSubjectConfirmation.subjectId));
+        
+        showToast('info', 'Subject Deleted', 'Subject deleted successfully');
       } catch (err) {
         console.error('Error deleting subject:', err);
         showToast('error', 'Error', 'Failed to delete subject. Please try again.');
@@ -723,41 +888,53 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
       icon: 'pi pi-user',
       command: handleProfilePopupOpen,
       template: (item: any, options: any) => (
-        <button onClick={options.onClick} className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-100 transition-colors duration-200">
+        <button
+          onClick={options.onClick}
+          tabIndex={0} // Ensure button is focusable
+          className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-100 focus:bg-gray-100 transition-colors duration-200"
+        >
           <span className="flex items-center">
             <i className={`${item.icon} mr-2`}></i>
             <span>{item.label}</span>
           </span>
         </button>
-      )
+      ),
     },
-    { 
-      label: 'Inbox', 
-      icon: 'pi pi-inbox', 
+    {
+      label: 'Inbox',
+      icon: 'pi pi-inbox',
       command: () => handleInbox(),
       template: (item: any, options: any) => (
-        <button onClick={options.onClick} className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-100 transition-colors duration-200">
+        <button
+          onClick={options.onClick}
+          tabIndex={0} // Ensure button is focusable
+          className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-100 focus:bg-gray-100 transition-colors duration-200"
+        >
           <span className="flex items-center">
             <i className={`${item.icon} mr-2`}></i>
             <span>{item.label}</span>
           </span>
           {inboxCount > 0 && <Badge value={inboxCount} severity="danger" className="ml-2"></Badge>}
         </button>
-      )
+      ),
     },
     {
       label: 'Logout',
       icon: 'pi pi-sign-out',
       command: () => logout(),
       template: (item: any, options: any) => (
-        <button onClick={options.onClick} className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-100 transition-colors duration-200">
+        <button
+          onClick={options.onClick}
+          tabIndex={0} // Ensure button is focusable
+          className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-100 focus:bg-gray-100 transition-colors duration-200"
+        >
           <span className="flex items-center">
             <i className={`${item.icon} mr-2`}></i>
             <span>{item.label}</span>
           </span>
         </button>
-      )
-    }
+      ),
+    },
   ];
 
   const handleInbox = () => {
@@ -816,6 +993,7 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
       removeCurrentNote();
       await fetchFoldersAndSubjects;
       await fetchNotes();
+      await fetchNotesThatAreSharedWithMe();
 
     } catch (error) {
       console.error('Error accepting note:', error);
@@ -963,7 +1141,6 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
       setEmail(response.data.email);
       setTempEmail(response.data.email);
       setLoading(false);
-      // console.log('User data:', response.data);
       registerWebSocket(response.data.email);
     } catch (err) {
       console.error('Error fetching user data:', err);
@@ -991,20 +1168,53 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
         subjectName: note.subject_name || note.subjectName || 'Uncategorized',
         content: note.content || '',
         color: note.color || '#637c99',
+        isShared: false, // Add this flag
       }));
-      // console.log('Transformed notes:', transformedNotes);
-      setNotes(transformedNotes);
+      return transformedNotes;
     } catch (err) {
       console.error('Error fetching notes:', err);
       setError('Failed to load notes');
+      return [];
     }
   }, []);
 
+  const fetchNotesThatAreSharedWithMe = useCallback(async () => {
+    try {
+      const response = await api.getShareNotes();
+      const transformedSharedNotes = response.data.notes.map((note: any) => ({
+        ...note,
+        id: note.id.toString(),
+        updatedAt: note.updated_at || note.updatedAt || new Date().toISOString(),
+        folderName: 'Shared Notes',
+        subjectName: 'All Shared Notes',
+        content: note.content || '',
+        color: note.color || '#637c99',
+        isShared: true, // Add this flag
+      }));
+      return transformedSharedNotes;
+    } catch (err) {
+      console.error('Error fetching shared notes:', err);
+      setError('Failed to load shared notes');
+      return [];
+    }
+  }, []);
+
+  useEffect(() => {
+    const fetchAllNotes = async () => {
+      setLoading(true);
+      const [regularNotes, sharedNotes] = await Promise.all([
+        fetchNotes(),
+        fetchNotesThatAreSharedWithMe()
+      ]);
+      setNotes([...regularNotes, ...sharedNotes]);
+      setLoading(false);
+    };
+    fetchAllNotes();
+  }, [fetchNotes, fetchNotesThatAreSharedWithMe]);
 
   const fetchFoldersAndSubjects = useCallback(async () => {
     try {
       const response = await api.getFoldersAndSubjects();
-      // console.log('Raw folders and subjects response:', response.data);
       
       const transformedFolders = response.data.folders.map((folder: any) => ({
         ...folder,
@@ -1017,7 +1227,6 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
         })),
       }));
       
-      // console.log('Transformed folders:', transformedFolders);
       setFolders(transformedFolders);
     } catch (err) {
       console.error('Error fetching folders and subjects:', err);
@@ -1051,7 +1260,6 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
 
   useEffect(() => {
     fetchUserData();
-    fetchNotes();
   }, []); 
 
   useEffect(() => {
@@ -1112,7 +1320,9 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
         const newSubject = {
           id: response.data.id.toString(),
           name: response.data.name,
-          notes: []
+          notes: [],
+          createdAt: new Date().toISOString(),
+          lastEditDate: new Date().toISOString()
         };
 
         setFolders(prevFolders => {
@@ -1122,44 +1332,41 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
                   ...folder,
                   subjects: [
                     ...folder.subjects,
-                    {
-                      id: newSubject.id,
-                      name: newSubject.name,
-                      notes: [],
-                      createdAt: new Date().toISOString(),
-                      lastEditDate: new Date().toISOString()
-                    }
+                    newSubject
                   ]
                 }
               : folder
           );
+          
+          // If we're currently viewing the folder where the new subject was added,
+          // update the selectedFolder state as well
+          if (selectedFolder && selectedFolder.id === selectedFolderId) {
+            setSelectedFolder(updatedFolders.find(f => f.id === selectedFolderId) || null);
+          }
+          
           return updatedFolders;
         });
 
+        // Force a re-render of the current view
+        setCurrentView(prevView => {
+          if (prevView === 'folder') {
+            // If we're in the folder view, toggle it to trigger a re-render
+            setCurrentView('all');
+            setTimeout(() => setCurrentView('folder'), 0);
+          }
+          return prevView;
+        });
+
         showToast('info', 'Success', 'Subject created successfully');
-        
-        // Refresh folders and subjects
-        //await fetchFoldersAndSubjects();
       } catch (error) {
         console.error('Error creating subject:', error);
-        if (error instanceof Error && 'response' in error) {
-          const axiosError = error as { response?: { data: any, status: number } };
-          console.error('Error response:', axiosError.response?.data);
-          console.error('Error status:', axiosError.response?.status);
-        } else if (error instanceof Error) {
-          if ('request' in error) {
-            console.error('Error request:', error.request);
-          } else {
-            console.error('Error:', error.message);
-          }
-        }
         setErrorPopup({ isOpen: true, message: 'Failed to create subject. Please try again.' });
         showToast('error', 'Error', 'Failed to create subject. Please try again.');
       } finally {
         setLoadingNewNote(false);
       }
     }
-  }, [selectedFolderId, showToast]);
+  }, [selectedFolderId, selectedFolder, showToast]);
 
   const sortNotes = (notesToSort: Note[]): Note[] => {
     return notesToSort.sort((a, b) => {
@@ -1172,18 +1379,17 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
 
   const getCurrentNotes = () => {
     let currentNotes;
-    if (currentView === 'all') {
-      currentNotes = notes;
+    if (typeof currentView !== 'string') {
+      currentNotes = currentView.notes;
     } else {
-      currentNotes = notes.filter(note => 
-        currentView !== "folder" && note.subjectName === currentView.name
-      );
+      currentNotes = notes;
     }
+    
     if (mainSearchTerm) {
       currentNotes = currentNotes.filter(note => 
-          note.title.toLowerCase().startsWith(mainSearchTerm.toLowerCase())
+        note.title.toLowerCase().includes(mainSearchTerm.toLowerCase())
       );
-  }
+    }
 
     return sortNotes(currentNotes);
   };
@@ -1200,7 +1406,7 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
     navigate(`/notes/${note.id}`, { state: { note } });
   };
 
-  const handleDeleteNote = (noteId: string) => {
+  const handleDeleteNote = async (noteId: string) => {
     setDeleteConfirmation({ isOpen: true, noteId });
   };
 
@@ -1214,7 +1420,52 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
         console.log('Delete response:', response);
         
         if (response.status === 200) {
+          // Remove the note from the notes state
           setNotes(prevNotes => prevNotes.filter(note => note.id !== deleteConfirmation.noteId));
+          
+          // Update folders state
+          setFolders(prevFolders => 
+            prevFolders.map(folder => ({
+              ...folder,
+              subjects: folder.subjects.map(subject => ({
+                ...subject,
+                notes: subject.notes.filter(note => note.id !== deleteConfirmation.noteId)
+              }))
+            }))
+          );
+          
+          // Update currentView if it's a subject view
+          if (typeof currentView !== 'string') {
+            setCurrentView(prevView => {
+              if (typeof prevView !== 'string' && prevView !== undefined) {
+                return {
+                  ...prevView,
+                  notes: prevView.notes.filter(note => note.id !== deleteConfirmation.noteId)
+                };
+              } else {
+                // Handle the case where prevView is a string or undefined
+                return prevView;
+              }
+            });
+          }
+          
+          // Update selectedSubject if necessary
+          if (selectedSubject) {
+            setSelectedSubject(prevSubject => {
+              if (prevSubject && typeof prevSubject === 'object' && 'notes' in prevSubject) {
+                return {
+                  ...prevSubject,
+                  notes: prevSubject.notes.filter(
+                    note => note.id !== deleteConfirmation.noteId
+                  ),
+                };
+              } else {
+                // Return prevSubject as is if it's not the expected object
+                return prevSubject;
+              }
+            });
+          }
+          
           showToast('info', 'Note Deleted', 'Note Deleted Successfully');
         } else {
           throw new Error('Unexpected response status');
@@ -1259,6 +1510,19 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
     }
   
     try {
+      setIsSharingNotePopupOpen(false);
+      setLoadingNewNote(true);
+  
+      // Check if the current user is the owner of the note
+      const userRoleResponse = await api.getUserRole(noteId);
+      const userRole = userRoleResponse.data.role;
+  
+      if (userRole !== 'owner') {
+        console.log('User is not the owner of the note');
+        showToast('error', 'Error', 'Only owners can share notes.');
+        return;
+      }
+  
       console.log('Checking if email exists:', shareUserEmail);
       const emailExists = await api.checkEmailExists(shareUserEmail);
       console.log('Email exists:', emailExists);
@@ -1273,8 +1537,7 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
       await api.shareNote(noteId, shareUserEmail, isEditor);
       console.log('Note shared successfully');
       showToast('success', 'Success', 'Note shared successfully');
-      setIsSharingNotePopupOpen(false);
-
+  
       // Notify the WebSocket server
       if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
         socketRef.current.send(
@@ -1292,6 +1555,8 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
         console.error('Error message:', error.message);
       }
       showToast('error', 'Error', 'Failed to share note. Please try again.');
+    } finally {
+      setLoadingNewNote(false);
     }
   }, [email, showToast]);
 
@@ -1330,18 +1595,17 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
   const [loadingNewNote, setLoadingNewNote] = useState(false);
 
   const handleNewNoteSubmit = useCallback(async (title: string, folderName: string, subjectName: string) => {
-    
     if (notes.length >= 1000) {
       setErrorPopup({ isOpen: true, message: 'Too Many Notes. Maximum limit reached.' });
       showToast('warn', 'Too Many Notes', 'Maximum limit reached.');
       return;
     }
-
+  
     setLoadingNewNote(true);
-
+  
     try {
       const currentDate = new Date().toISOString();
-
+  
       const response = await api.createNote({
         title,
         content: '',
@@ -1349,18 +1613,61 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
         subjectName,
         createdAt: currentDate,
       });
-
-      // Manually update the local state to reflect the newly created note
-      if (selectedFolder && selectedSubject) {
-        fetchNotes();
-        fetchFoldersAndSubjects();
-        handleSubjectClick(selectedSubject, selectedFolder);
-      } else {
-        fetchNotes();
-        fetchFoldersAndSubjects();
+  
+      const newNote = {
+        ...response.data,
+        id: response.data.id.toString(),
+        updatedAt: response.data.updated_at || currentDate,
+        folderName: response.data.folder_name || folderName,
+        subjectName: response.data.subject_name || subjectName,
+        color: response.data.color || '#637c99',
+      };
+  
+      setNotes(prevNotes => [...prevNotes, newNote]);
+  
+      setFolders(prevFolders => {
+        const updatedFolders = prevFolders.map(folder => {
+          if (folder.name === folderName) {
+            return {
+              ...folder,
+              subjects: folder.subjects.map(subject => {
+                if (subject.name === subjectName) {
+                  return {
+                    ...subject,
+                    notes: [...subject.notes, newNote],
+                  };
+                }
+                return subject;
+              }),
+            };
+          }
+          return folder;
+        });
+  
+        // If we're currently viewing the folder where the new note was added,
+        // update the selectedFolder state as well
+        if (selectedFolder && selectedFolder.name === folderName) {
+          setSelectedFolder(updatedFolders.find(f => f.name === folderName) || null);
+        }
+  
+        return updatedFolders;
+      });
+  
+      // Update the current view if it's a subject
+      if (typeof currentView !== 'string' && currentView.name === subjectName) {
+        setCurrentView(prevView => {
+          if (typeof prevView !== 'string' && prevView !== undefined) {
+            return {
+              ...prevView,
+              notes: [...prevView.notes, newNote],
+            };
+          } else {
+            return prevView;
+          }
+        });
       }
-          
-      console.log('Note created successfully:', response.data);
+  
+      setIsNewNotePopupOpen(false);
       showToast('info', 'New Note Created', 'Successfully created a new note');
     } catch (error) {
       console.error('Error creating note:', error);
@@ -1369,7 +1676,7 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
     } finally {
       setLoadingNewNote(false);
     }
-  }, [selectedSubject, selectedFolder, showToast, fetchNotes]);
+  }, [selectedFolder, currentView, showToast, notes]);
 
   const getContentPreview = (content: string, maxLength: number = 100) => {
     if (!content) return '';
@@ -1382,6 +1689,19 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
   const handleSort = (order: 'asc' | 'desc') => {
     setSortOrder(order);
     setIsSortOpen(false);
+    
+    setCurrentView(prevView => {
+      // Force a re-render of the current view
+      if (typeof prevView === 'object' && prevView !== null && 'notes' in prevView) {
+        return {
+          ...prevView,
+          notes: sortNotes([...prevView.notes || []]),
+        };
+      } else {
+        return prevView;
+      }
+    });
+    
     showToast('info', 'Sorted', `Notes sorted in ${order === 'asc' ? 'ascending' : 'descending'} order`);
   };
 
@@ -1401,25 +1721,70 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
     fileInputRef.current?.click();
   };
 
+  const resizeImage = (file: File, size: number): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d');
+          
+          // Calculate the scaling factor
+          const scale = Math.max(size / img.width, size / img.height);
+          
+          // Calculate the center position
+          const x = (size - img.width * scale) / 2;
+          const y = (size - img.height * scale) / 2;
+          
+          // Draw the image on the canvas
+          ctx?.drawImage(img, x, y, img.width * scale, img.height * scale);
+  
+          // Convert canvas to blob
+          canvas.toBlob((blob) => {
+            if (blob) {
+              resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+            } else {
+              reject(new Error('Canvas to Blob conversion failed'));
+            }
+          }, 'image/jpeg');
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+  
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       try {
         setIsLoading(true);
-        const imageUrl = await api.uploadProfileImage(file);
-        setProfileImageUrl(imageUrl);
-        await api.updateProfileImage(imageUrl);
-        showToast('info', 'Profile Image updated', 'Profile image updated successfully');
+        // Resize the image to 200x200 pixels
+        const resizedFile = await resizeImage(file, 200);
+  
+        // Upload the resized image to Firebase storage
+        const downloadURL = await api.uploadProfileImage(resizedFile);
+        
+        if (downloadURL) {
+          // Update the profile with the new image URL
+          await api.updateProfileImage(downloadURL);
+          setProfileImageUrl(downloadURL);
+          showToast('success', 'Profile Image Updated', 'Profile image updated and saved successfully');
+        } else {
+          throw new Error('Failed to get image URL from server');
+        }
       } catch (error) {
         console.error('Error updating profile image:', error);
-        showToast('error', 'Error', 'Failed to update profile image');
+        showToast('error', 'Error', 'Failed to update and save profile image');
       } finally {
         setIsLoading(false);
       }
     }
   };
 
-  // This is replaced with showToast(). TODO: remove
   if (error) {
     return <div>Error: {error}</div>;
   }
@@ -1444,7 +1809,10 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
           className="absolute z-10 left-16 top-7 transform transition-transform hover:scale-105 active:scale-100 cursor-pointer"
         ></Badge>
         )}
-        <div className="user-info flex items-center mb-8 relative">
+        <div
+          className="user-info flex items-center mb-8 relative"
+          tabIndex={0}
+        >
         
         <div className="flex">
           {loading ? (
@@ -1454,10 +1822,12 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
             <Avatar 
               image={profileImageUrl || undefined}
               icon={"pi pi-user"}
-              className="w-12 h-12 rounded-full shadow-sm transform transition-transform hover:scale-110 active:scale-100 cursor-pointer object-cover overflow-hidden"
+              className="w-12 h-12 rounded-full shadow-sm transform transition-transform hover:scale-110 focus:scale-110 active:scale-100 cursor-pointer object-cover overflow-hidden"
               size="large" 
               shape="circle" 
               onClick={(e) => menu.current?.toggle(e)} 
+              onKeyPress={(e) => e.key === 'Enter' && menu.current?.toggle(e)}
+              tabIndex={0}
             />
           )}
         </div>
@@ -1466,8 +1836,10 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
           <Skeleton width="4rem" className="ml-3" />
         ) : (
           <span
-            className="username ml-3 font-medium text-lg transform transition-transform hover:scale-110 active:scale-100 cursor-pointer"
+            className="username ml-3 font-medium text-lg transform transition-transform hover:scale-110 focus:scale-110 active:scale-100 cursor-pointer"
             onClick={(e) => menu.current?.toggle(e)}
+            onKeyPress={(e) => e.key === 'Enter' && menu.current?.toggle(e)}
+            tabIndex={0}
           >
             {username}
           </span>
@@ -1513,15 +1885,22 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
                 <div
                   className={`folder-header ${selectedFolder?.id === folder.id ? 'selected' : ''}`}
                   onClick={() => toggleFolder(folder.id)}
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      toggleFolder(folder.id);  // Trigger folder opening on Enter key
+                    }
+                  }}
                 >
                   {editingFolderId === folder.id ? (
                     <input
                       type="text"
                       defaultValue={folder.name}
                       onBlur={(e) => handleSaveFolderEdit(folder.id, e.target.value)}
-                      onKeyPress={(e) => {
+                      onKeyDown={(e) => {
                         if (e.key === 'Enter') {
-                          handleSaveFolderEdit(folder.id, e.currentTarget.value);
+                          e.preventDefault();
+                          e.currentTarget.blur(); // This will trigger the onBlur event
                         }
                       }}
                       onClick={(e) => e.stopPropagation()}
@@ -1535,6 +1914,7 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
                     <button
                       className="folder-options-btn"
                       onClick={(e) => handleFolderOptions(e, folder.id)}
+                      tabIndex={0}
                     >
                       <FaEllipsisV />
                     </button>
@@ -1546,10 +1926,16 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
                 {selectedFolder?.id === folder.id && (
                   <div className="subjects-container">
                     <div
-                      className="subject add-subject flex items-center px-3 py-2 hover:bg-blue-500 hover:text-white transition-colors duration-300 cursor-pointer"
+                      className="subject add-subject flex items-center px-3 py-2 hover:bg-blue-500 hover:text-white focus:bg-blue-500 focus:text-white transition-colors duration-300 cursor-pointer"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleAddSubject(folder.id);
+                      }}
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleAddSubject(folder.id);
+                        }
                       }}
                     >
                       <FaPlus className="mr-2 text-sm" /> <span>Add Subject</span>
@@ -1561,15 +1947,17 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
                           key={subject.id}
                           className={`subject ${selectedSubject?.id === subject.id ? 'selected' : ''}`}
                           onClick={() => handleSubjectClick(subject, folder)}
+                          tabIndex={0}
                         >
                           {editingSubjectId === subject.id ? (
                             <input
                               type="text"
                               defaultValue={subject.name}
                               onBlur={(e) => handleSaveSubjectEdit(subject.id, e.target.value)}
-                              onKeyPress={(e) => {
+                              onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
-                                  handleSaveSubjectEdit(subject.id, e.currentTarget.value);
+                                  e.preventDefault();
+                                  e.currentTarget.blur(); // This will trigger the onBlur event
                                 }
                               }}
                               onClick={(e) => e.stopPropagation()}
@@ -1588,7 +1976,7 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
           )}
         </div>
         <div className="sidebar-footer">
-          <button className="signout-btn" onClick={handleCreateFolder}>Create Category</button>
+          <button className="signout-btn" onClick={handleCreateFolder} tabIndex={0}>Create Category</button>
         </div>
       </div>
       {/* <div 
@@ -1608,28 +1996,34 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
           className="burger-icon cursor-pointer" 
         />
       </div>
-      <div className="main-content">
-        <div className="top-bar">
-          {renderTitle()}
-          <div className="top-bar-right">
-            
-            <div className="search-container">
-              <input
-                type="text"
-                placeholder="Search notes..."
-                value={mainSearchTerm}
-                onChange={(e) => setMainSearchTerm(e.target.value)}
-                className="search-input"
-              />
-              <button onClick={handleMainSearch} className="search-button">
-                <FaSearch />
-              </button>
+        <div className="main-content">
+          <div className="top-bar">
+            {renderTitle()}
+            <div className="top-bar-right">
+              {currentView === 'all' && (
+                <>
+                  <div className="search-container">
+                    <input
+                      type="text"
+                      placeholder="Search notes..."
+                      value={mainSearchTerm}
+                      onChange={(e) => setMainSearchTerm(e.target.value)}
+                      className="search-input"
+                      tabIndex={0}
+                    />
+                    <button onClick={handleMainSearch} className="search-button">
+                      <FaSearch />
+                    </button>
+                  </div>
+                </>
+              )}
+              {(currentView === 'all' || typeof currentView !== 'string') && (
+                <button onClick={handleAddNote} className="add-note-button" tabIndex={0}>
+                  <FaPlus /> Create Note
+                </button>
+              )}
             </div>
-            <button onClick={handleAddNote} className="add-note-button">
-              <FaPlus /> Create Note
-            </button>
           </div>
-        </div>
         
         {currentView === 'all' && (
           <div className="notes-grid">
@@ -1662,7 +2056,7 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
               </>
             ) : (
               getCurrentNotes().map((note) => (
-                <div key={note.id} className="note-card" onClick={() => handleNoteClick(note)}>
+                <div key={note.id} className="note-card" tabIndex={0} onClick={() => handleNoteClick(note)}>
                   <div 
                     className="note-thumbnail"
                     style={{
@@ -1679,9 +2073,10 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
                         type="text"
                         defaultValue={note.title}
                         onBlur={(e) => handleSaveEdit(note.id, e.target.value)}
-                        onKeyPress={(e) => {
+                        onKeyDown={(e) => {
                           if (e.key === 'Enter') {
-                            handleSaveEdit(note.id, e.currentTarget.value);
+                            e.preventDefault();
+                            e.currentTarget.blur(); // This will trigger the onBlur event
                           }
                         }}
                         onClick={(e) => e.stopPropagation()}
@@ -1797,7 +2192,7 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
         {typeof currentView !== 'string' && (
           <div className="notes-grid">
             {currentView.notes && currentView.notes.length > 0 ? (
-              currentView.notes.map(note => (
+              currentView.notes.map((note) => (
                 <div key={note.id} className="note-card" onClick={() => handleNoteClick(note)}>
                   <div 
                     className="note-thumbnail"
@@ -1810,7 +2205,23 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
                     </div>
                   </div>
                   <div className="note-content">
-                    <h3 className="note-title">{note.title}</h3>
+                    {editingNoteId === note.id ? (
+                      <input
+                        type="text"
+                        defaultValue={note.title}
+                        onBlur={(e) => handleSaveEdit(note.id, e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            e.currentTarget.blur(); // This will trigger the onBlur event
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        autoFocus
+                      />
+                    ) : (
+                      <h3 className="note-title">{note.title}</h3>
+                    )}
                     <p className="note-category">{note.folderName}: {note.subjectName}</p>
                     <p className="note-date">Last Edited: {formatDate(note.updatedAt)}</p>
                   </div>
@@ -1840,13 +2251,34 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
                         ))}
                       </div>
                     )}
-                    <button className="icon-button edit-btn" aria-label="Edit note" onClick={(e) => { e.stopPropagation();}}>
+                    <button
+                      className="icon-button edit-btn"
+                      aria-label="Edit note"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditNote(note.id);
+                      }}
+                    >
                       <FaEdit />
                     </button>
-                    <button className="icon-button delete-btn" aria-label="Delete note" onClick={(e) => { e.stopPropagation(); handleDeleteNote(note.id); }}>
+                    <button
+                      className="icon-button delete-btn"
+                      aria-label="Delete note"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteNote(note.id);
+                      }}
+                    >
                       <FaTrash />
                     </button>
-                    <button className="icon-button share-btn" aria-label="Share note" onClick={(e) => { e.stopPropagation(); handleShare(note.id); }}>
+                    <button
+                      className="icon-button share-btn"
+                      aria-label="Share note"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleShare(note.id);
+                      }}
+                    >
                       <FaShare />
                     </button>
                   </div>
@@ -2034,14 +2466,16 @@ const HomePage: React.FC<HomePageProps & { showToast: (severity: 'success' | 'in
           onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the menu
         >
           <button 
-            className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors duration-200"
+            className="w-full text-left px-4 py-2 hover:bg-gray-100 focus:bg-gray-100 transition-colors duration-200"
             onClick={() => handleEditFolder(folderOptionsMenu.folderId!)}
+            tabIndex={0}
           >
             Rename
           </button>
           <button 
-            className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors duration-200"
+            className="w-full text-left px-4 py-2 hover:bg-gray-100 focus:bg-gray-100 transition-colors duration-200"
             onClick={() => handleDeleteFolder(folderOptionsMenu.folderId!)}
+            tabIndex={0}
           >
             Delete
           </button>

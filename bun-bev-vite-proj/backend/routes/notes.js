@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createNote, editNote, deleteNote, getAllNotes, updateNoteColor, getNote } = require('../controllers/noteController');
+const { createNote, editNote, deleteNote, getAllNotes, updateNoteColor, getNote, getSharedNotes} = require('../controllers/noteController');
 const authMiddleware = require('../middleware/auth');
 
 router.use(authMiddleware);
@@ -36,6 +36,38 @@ router.use(authMiddleware);
  *         description: Internal server error
  */
 router.get('/', getAllNotes);
+
+/**
+ * @swagger
+ * /notes:
+ *   get:
+ *     summary: Get all shared notes
+ *     description: Retrieve list of all notes for a user.
+ *     responses:
+ *       200:
+ *         description: A list of notes
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                   title:
+ *                     type: string
+ *                   content:
+ *                     type: string
+ *                   updatedAt:
+ *                     type: string
+ *                     format: date-time
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/shared-notes', getSharedNotes);
 
 /**
  * @swagger
@@ -106,7 +138,37 @@ router.put('/:id', editNote);
 
 /**
  * @swagger
- * TODO
+ * /notes/{id}/color:
+ *   put:
+ *     summary: Update the colour of a note
+ *     description: Change the colour of an existing note
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         description: The ID of the note to update the colour of
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               color:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Note color updated successfully
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorised
+ *       404:
+ *         description: Note not found
+ *       500:
+ *         description: Internal server error
  */
 router.put('/:id/color', updateNoteColor);
 
@@ -115,7 +177,7 @@ router.put('/:id/color', updateNoteColor);
  * /notes/{id}:
  *   delete:
  *     summary: Delete a note
- *     description: Delete an existing note for the user.
+ *     description: Delete an existing note.
  *     parameters:
  *       - name: id
  *         in: path
@@ -127,7 +189,7 @@ router.put('/:id/color', updateNoteColor);
  *       204:
  *         description: Note deleted successfully
  *       401:
- *         description: Unauthorized
+ *         description: Unauthorised
  *       404:
  *         description: Note not found
  *       500:
@@ -137,7 +199,40 @@ router.delete('/:id', deleteNote);
 
 /**
  * @swagger
- * TODO
+ * /notes/{id}:
+ *   get:
+ *     summary: Get a specific note
+ *     description: Retrieve a specific note by its ID.
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         description: The ID of the note to retrieve
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: A note object
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 title:
+ *                   type: string
+ *                 content:
+ *                   type: string
+ *                 updatedAt:
+ *                   type: string
+ *                   format: date-time
+ *       401:
+ *         description: Unauthorised
+ *       404:
+ *         description: Note not found
+ *       500:
+ *         description: Internal server error
  */
 router.get('/:id', getNote);
 

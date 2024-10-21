@@ -16,7 +16,6 @@
 }
 
 .custom-header .p-dialog-header {
-  /*background-color: #f8f9fa !important;*/
   background-color: #e6f3ff !important;
   color: #000 !important;
 }
@@ -179,6 +178,7 @@
   transition: background-color 0.3s;
 }
 
+.sidebar .folder-header:focus,
 .sidebar .folder-header:hover {
   background-color: var(--second-blue);
   color: var(--text-dark);
@@ -192,7 +192,7 @@
 .sidebar .subjects {
   margin-left: 1.5rem;
   margin-top: 0.5rem;
-  max-height: 200px; /* Adjust this value as needed */
+  max-height: 200px;
   overflow-y: auto;
   scrollbar-width: none; /* For Firefox */
   -ms-overflow-style: none; /* For Internet Explorer and Edge */
@@ -211,7 +211,9 @@
   margin-bottom: 0.25rem;
 }
 
-.sidebar .subject:hover, .sidebar .subject.selected {
+.sidebar .subject:hover, 
+.sidebar .subject:focus,
+.sidebar .subject.selected {
   background-color: var(--light-gray);
   color: var(--text-dark);
 }
@@ -235,7 +237,8 @@
   margin-right: 0.5rem;
 }
 
-.sidebar .add-subject:hover {
+.sidebar .add-subject:hover,
+.sidebar .add-subject:focus {
   background-color: var(--accent);
   color: var(--white);
 }
@@ -253,7 +256,8 @@
   transition: background-color 0.3s, transform 0.3s, box-shadow 0.3s;
 }
 
-.sidebar .create-btn:hover {
+.sidebar .create-btn:hover,
+.sidebar .create-btn:focus {
   background-color: var(--primary-dark);
   transform: translateY(-2px);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
@@ -332,10 +336,9 @@
   cursor: pointer;
 }
 
-/* Main Content Styles */
 .main-content {
-  margin-left: 300px; /* Offset by the width of the sidebar */
-  flex-grow: 1; /* Allow main content to take the remaining space */
+  margin-left: 300px;
+  flex-grow: 1;
   display: flex;
   flex-direction: column;
   padding: 2rem;
@@ -420,10 +423,20 @@
   height: 100%;
 }
 
-.main-content .add-note-button:hover {
+.main-content .add-note-button:hover,
+.main-content .add-note-button:focus {
   background-color: var(--primary-dark);
   transform: translateY(-2px);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+:focus {
+  outline: none;
+}
+
+/* Search Input */
+.main-content .search-input:focus {
+  box-shadow: 0 0 0 2px var(--accent);
 }
 
 .main-content .add-note-button svg {
@@ -457,11 +470,12 @@
   right: 0;
   bottom: 0;
   background-color: var(--accent); /* Default nice color */
-  opacity: 0.1; /* Adjust this value to make the color lighter or darker */
+  opacity: 0.1;
   transition: opacity 0.3s;
 }
 
-.main-content .note-card:hover::before {
+.main-content .note-card:hover::before,
+.main-content .note-card:focus-within::before {
   opacity: 0; 
 }
 
@@ -479,13 +493,40 @@
   pointer-events: none;
 }
 
-.main-content .note-card:hover::after {
+.main-content .note-card:hover::after,
+.main-content .note-card:focus-within::after {
   opacity: 1; 
 }
 
-.main-content .note-card:hover {
+.main-content .note-card:hover,
+.main-content .note-card:focus,
+.main-content .note-card:focus-within {
   transform: translateY(-5px);
   box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+}
+
+.main-content .note-card .icon-button:hover ~ .note-actions {
+  opacity: 1; /* Ensure note-actions are visible when icon-buttons are hovered */
+}
+
+/* Overlay effect on focus (same as hover) */
+.main-content .note-card:focus::before {
+  opacity: 0; /* Same as hover */
+}
+
+/* Border effect on focus (same as hover) */
+.main-content .note-card:focus::after {
+  opacity: 1; /* Same as hover */
+}
+
+/* Show note actions on focus */
+.main-content .note-card:focus .note-actions {
+  opacity: 1; /* Same as hover */
+}
+
+/* Ensure focus outline is removed */
+.main-content .note-card:focus {
+  outline: none;
 }
 
 .main-content .note-thumbnail {
@@ -565,7 +606,8 @@
   transition: opacity 0.3s;
 }
 
-.main-content .note-card:hover .note-actions {
+.main-content .note-card:hover .note-actions,
+.main-content .note-card:focus-within .note-actions {
   opacity: 1;
 }
 
@@ -585,7 +627,8 @@
   position: relative;
 }
 
-.main-content .icon-button:hover {
+.main-content .icon-button:hover,
+.main-content .icon-button:focus {
   background-color: var(--accent);
   color: var(--white);
   transform: scale(1.1);
@@ -611,7 +654,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000; /* Increase this value if needed */
+  z-index: 1000;
 }
 
 .popup {
@@ -670,11 +713,17 @@
 }
 
 .cancel-button {
-  background-color: var(--white);
-  color: var(--accent);
-  outline: 2px solid var(--accent);
+  background-color: #da190bb9;
+  color: white;
 }
 
+.popup-buttons .create-button:focus,
+.popup-buttons .create-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.cancel-button:focus,
 .cancel-button:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
@@ -691,8 +740,8 @@
   }
 
   .folder-options-menu {
-    left: auto; /* Reset left position */
-    right: 30px; /* Position to the left on mobile */
+    left: auto;
+    right: 30px;
   }
 
   .sidebar {
@@ -705,9 +754,9 @@
     padding: 2rem;
     display: flex;
     flex-direction: column;
-    transform: translateY(-100%); /* Hidden by default */
+    transform: translateY(-100%);
     transition: transform 0.3s ease;
-    z-index: 1000; /* Ensure it's above other elements */
+    z-index: 1000;
   }
 
   .sidebar.visible {
@@ -760,14 +809,14 @@
   }
 
   .main-content {
-    margin-left: 0; /* Remove sidebar offset */
-    height: auto; /* Adjust height */
-    flex-grow: 1; /* Allow main content to grow */
-    padding: 1rem; /* Adjust padding for mobile */
+    margin-left: 0;
+    height: auto;
+    flex-grow: 1;
+    padding: 1rem;
   }
 
   .main-content .top-bar {
-    position: static; /* Reset position for mobile */
+    position: static;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -830,6 +879,7 @@
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
+.sort-btn:focus,
 .sort-btn:hover {
   background-color: var(--accent);
   color: var(--white);
@@ -866,6 +916,7 @@
   font-weight: 500;
 }
 
+.sort-popup button:focus,
 .sort-popup button:hover {
   background-color: var(--background-light);
 }
@@ -908,6 +959,7 @@
   transition: background-color 0.3s;
 }
 
+.error-popup-button:focus,
 .error-popup-button:hover {
   background-color: var(--primary-dark);
   transform: translateY(-2px);
@@ -920,7 +972,8 @@
   border-radius: 8px;
   width: 350px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  border: 2px solid var(--accent); /* Add border to the entire popup */
+  border: 2px solid var(--accent);
+  z-index: 10000;
 }
 
 .confirmation-popup p {
@@ -948,7 +1001,7 @@
 .confirmation-popup .confirm-button {
   background-color: var(--accent);
   color: white;
-  border: 2px solid var(--accent); /* Add border to the confirm button */
+  border: 2px solid var(--accent);
 }
 
 .confirmation-popup .confirm-button:hover {
@@ -958,10 +1011,11 @@
 }
 
 .confirmation-popup .cancel-button {
-  background-color: #f44336;
+  background-color: #f44336d4;
   color: white;
 }
 
+.confirmation-popup .cancel-button:focus,
 .confirmation-popup .cancel-button:hover {
   background-color: #da190b;
   transform: translateY(-2px);
@@ -1030,34 +1084,63 @@
 }
 
 .subject-block {
+  background-color: #a4ccf2a2;
+  max-width: 235px;
+  min-height: 85px;
+  margin: 10px;
+  color: var(--text-dark);
+  padding: 1rem;
+  border-radius: 8px;
+  transition: all 0.3s ease;
   position: relative;
-  padding: 1rem; 
-  background: linear-gradient(135deg, 
-    rgba(35, 115, 189, 0.452),
-    rgba(98, 136, 172, 0.301)  
-  );
-  border-radius: 12px; 
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.288); 
-  min-height: 100px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  transition: transform 0.3s, box-shadow 0.3s;
-  cursor: pointer;
-  backdrop-filter: blur(5px); 
-}
-
-.subject-actions {
-  position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
-  display: flex;
-  gap: 0.5rem;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
 }
 
 .subject-block:hover {
   transform: translateY(-5px);
   box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+}
+
+.subject-actions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  background-color: white;
+  border-radius: 20px;
+  padding: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.subject-block:hover .subject-actions {
+  opacity: 1;
+}
+
+.subject-actions button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  margin: 0 2px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s ease;
+}
+
+.subject-actions button:hover {
+  background-color: #f0f0f0;
+}
+
+.subject-actions img {
+  width: 16px;
+  height: 16px;
 }
 
 .subject-title {
@@ -1114,7 +1197,8 @@
   margin-right: 10px;
 }
 
-.folder-header:hover .folder-options-btn {
+.folder-header:hover .folder-options-btn,
+.folder-header:focus .folder-options-btn {
   opacity: 1;
 }
 
@@ -1130,8 +1214,7 @@
   border-radius: 4px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   z-index: 1000;
-  /* Ensure the menu can be positioned dynamically */
-  right: auto; /* Allow dynamic positioning */
+  right: auto;
 }
 
 .folder-options-menu button {
@@ -1205,8 +1288,15 @@
   color: var(--white);
 }
 
+.popup-buttons .share-button:focus,
 .popup-buttons .share-button:hover {
   background-color: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.popup-buttons .cancel-button:focus,
+.popup-buttons .cancel-button:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
 }
@@ -1216,7 +1306,7 @@
   justify-content: center;
   margin: 1rem auto 0.5rem;
   width: 100%;
-  max-width: 400px; /* Adjust this value to match the width of your input and button */
+  max-width: 400px;
 }
 
 .permission-options {
@@ -1240,6 +1330,7 @@
   color: var(--text-dark);
 }
 
+.permission-option:focus,
 .permission-option:hover {
   transform: translateY(-2px);
 }
@@ -1401,7 +1492,7 @@
   background-color: #ffffff;
   display: flex;
   flex-direction: column;
-  height: 200px; /* Set a fixed height */
+  height: 200px;
 }
 
 .shared-note-dialog .note-preview-container {

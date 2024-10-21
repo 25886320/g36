@@ -51,7 +51,19 @@ const LoginPage: React.FC<LoginPageProps & { showToast: (severity: 'success' | '
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
     try {
+      
+      console.log('Checking if email exists:', forgotPasswordEmail);
+      const emailExists = await api.checkEmailExists(forgotPasswordEmail);
+      console.log('Email exists:', emailExists);
+      
+      if (!emailExists) {
+        console.log('Email does not exist:', forgotPasswordEmail);
+        showToast('error', 'Error', 'The provided email does not exist.');
+        return;
+      }
+
       const response = await api.resetPasswordRequest(forgotPasswordEmail);
       showToast('success', 'Success', response.data.message);
     } catch (error) {
@@ -59,7 +71,6 @@ const LoginPage: React.FC<LoginPageProps & { showToast: (severity: 'success' | '
       showToast('error', 'Error', 'Failed to send password reset email.');
     } finally {
       setLoading(false);
-      setShowForgotPassword(false);
       setForgotPasswordEmail('');
     }
   };
@@ -153,7 +164,15 @@ const LoginPage: React.FC<LoginPageProps & { showToast: (severity: 'success' | '
                 />
               </div>
               <button type="submit" className="auth-button">
-                Send Reset Email
+                {loading ? (
+                  <ProgressSpinner
+                    style={{ width: '20px', height: '20px' }}
+                    strokeWidth="5"
+                    animationDuration="2s"
+                  />
+                ) : (
+                  'Send Reset Password'
+                )}
               </button>
             </form>
             <button

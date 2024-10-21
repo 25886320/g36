@@ -64,7 +64,7 @@ const App: React.FC = () => {
 
   // Function to show toast notifications
   const showToast = (severity: 'success' | 'info' | 'warn' | 'error' | 'secondary' | 'contrast' | undefined, summary: string, detail: string) => {
-    toast.current?.show({ severity, summary, detail });
+    toast.current?.show({ severity, summary, detail, life: 3000 });
   };
 
   // Function to handle login

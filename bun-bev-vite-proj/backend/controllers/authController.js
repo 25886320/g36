@@ -12,7 +12,6 @@ const pool = new Pool({
   },
 });
 
-// Create a transporter for nodemailer
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -153,6 +152,12 @@ const resetPassword = async (req, res) => {
     }
 
     const user = userResult.rows[0];
+
+    // Check if the password is strong enough
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      return res.status(400).json({ message: 'Password not strong enough.' });
+    }
 
     // Update the user's password
     const hashedPassword = await hashPassword(newPassword);

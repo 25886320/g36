@@ -96,33 +96,6 @@ const acceptInvite = async (req, res) => {
       return res.status(404).json({ message: 'Note not found' });
     }
 
-    const { title, subject_name, folder_name, content, owner_id } = noteResult.rows[0];
-
-    const createdAt = new Date().toISOString();
-
-    // Create new folder for the user
-    const newFolderResult = await pool.query(
-      `INSERT INTO folders (name, owner_id, created_at) VALUES ($1, $2, $3) RETURNING id`,
-      [folder_name, userId, createdAt]
-    );
-
-    const newFolderId = newFolderResult.rows[0].id;
-
-    // Create new subject for the user
-    const newSubjectResult = await pool.query(
-      `INSERT INTO subjects (name, folder_id, created_at) VALUES ($1, $2, $3) RETURNING id`,
-      [subject_name, newFolderId, createdAt]
-    );
-
-    const newSubjectId = newSubjectResult.rows[0].id;
-
-    // Link the note to the new subject
-    await pool.query(
-      `INSERT INTO notes (title, content, owner_id, created_at, subject_id, folder_id) 
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [title, content, owner_id, createdAt, newSubjectId, newFolderId]
-    );
-
     // Mark the invite as accepted
     await pool.query(
       `UPDATE user_notes 
@@ -165,7 +138,7 @@ const getUserRoleForNote = async (req, res) => {
   const { noteId } = req.params;
 
   try {
-    // First, check if the user is the owner
+    //check if the user is the owner
     const ownerResult = await pool.query(
       `SELECT owner_id FROM notes WHERE id = $1`,
       [noteId]

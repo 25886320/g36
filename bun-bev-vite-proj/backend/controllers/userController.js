@@ -41,7 +41,7 @@ const getUserByEmail = async (req, res) => {
 
 const updateProfileImageUrl = async (req, res) => {
   try {
-    const userId = req.user.id; // Middleware sets this
+    const userId = req.user.id;
     const { imageUrl } = req.body;
 
     const result = await pool.query(
@@ -62,13 +62,27 @@ const deleteAccount = async (req, res) => {
   
   try {
     await client.query('BEGIN');
+
+    // Find all notes owned by the user
+    const notesResult = await client.query('SELECT id FROM notes WHERE owner_id = $1', [userId]);
+    const noteIds = notesResult.rows.map(row => row.id);
+
+    // Delete all records in user_notes where note_id matches the user's notes
+    if (noteIds.length > 0) {
+      await client.query('DELETE FROM user_notes WHERE note_id = ANY($1::int[])', [noteIds]);
+    }
+
+    // Delete all notes owned by the user
     await client.query('DELETE FROM notes WHERE owner_id = $1', [userId]);
+
+    // Delete folders and subjects owned by the user
     await client.query('DELETE FROM subjects WHERE id IN (SELECT id FROM subjects WHERE folder_id IN (SELECT id FROM folders WHERE owner_id = $1))', [userId]);
     await client.query('DELETE FROM folders WHERE owner_id = $1', [userId]);
-    await client.query('DELETE FROM user_notes WHERE user_id = $1', [userId]);
-    await client.query('DELETE FROM users WHERE id = $1', [userId]);
-    await client.query('COMMIT');
 
+    // Delete the user
+    await client.query('DELETE FROM users WHERE id = $1', [userId]);
+
+    await client.query('COMMIT');
     res.status(200).json({ message: 'Account deleted successfully' });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -148,6 +162,103 @@ const checkEmailExists = async (req, res) => {
   }
 };
 
+const getUserDetailsByEmails = async (req, res) => {
+  const { emails, noteId } = req.body;
+
+  if (!emails || !Array.isArray(emails) || !noteId) {
+    return res.status(400).json({ error: 'Invalid request. A list of emails and a noteId are required.' });
+  }
+
+  try {
+    // Fetch the user details for the provided emails
+    const userQuery = `
+      SELECT id, username, email, avatar_url 
+      FROM users 
+      WHERE email = ANY($1::text[])
+    `;
+    const userResult = await pool.query(userQuery, [emails]);
+
+    if (!userResult.rows || userResult.rows.length === 0) {
+      return res.status(404).json({ message: 'No users found with the provided emails' });
+    }
+
+    const usersWithRoles = [];
+    for (const user of userResult.rows) {
+      // Check if the user has an entry in the user_notes table
+      const userNoteResult = await pool.query(
+        `SELECT editor FROM user_notes WHERE note_id = $1 AND user_id = $2`,
+        [noteId, user.id]
+      );
+
+      if (userNoteResult.rows.length > 0) {
+        // User is in user_notes, determine their role
+        const role = userNoteResult.rows[0].editor ? 'editor' : 'viewer';
+        usersWithRoles.push({
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          avatar: user.avatar_url,
+          role,
+        });
+      } else {
+        // User is not in user_notes, they are considered the owner
+        usersWithRoles.push({
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          avatar: user.avatar_url,
+          role: 'owner',
+        });
+      }
+    }
+
+    res.status(200).json(usersWithRoles);
+  } catch (error) {
+    console.error('Error fetching user details:', error);
+    res.status(500).json({ error: 'Failed to fetch user details' });
+  }
+};
+
+const getUserRole = async (req, res) => {
+  try {
+    const { noteId } = req.body;
+    const userId = req.user.id;
+
+    if (!noteId) {
+      return res.status(400).json({ error: 'Note ID is required.' });
+    }
+
+    // Check if the user is in the user_notes table
+    const userNoteResult = await pool.query(
+      `SELECT editor FROM user_notes WHERE note_id = $1 AND user_id = $2`,
+      [noteId, userId]
+    );
+
+    if (userNoteResult.rows.length > 0) {
+      // If the user is in the user_notes table, determine their role
+      const role = userNoteResult.rows[0].editor ? 'editor' : 'viewer';
+      return res.status(200).json({ role });
+    }
+
+    // If the user isn't in user_notes, check if they are in users
+    const userResult = await pool.query(
+      `SELECT id FROM users WHERE id = $1`,
+      [userId]
+    );
+
+    if (userResult.rows.length > 0) {
+      // If the user is in the users table, they are the owner
+      return res.status(200).json({ role: 'owner' });
+    }
+
+    // If the user is not found
+    return res.status(404).json({ error: 'User not found.' });
+  } catch (error) {
+    console.error('Error getting user role:', error);
+    return res.status(500).json({ error: 'Failed to determine user role.' });
+  }
+};
+
 module.exports = { 
   getUserProfile, 
   getUserByEmail, 
@@ -155,5 +266,7 @@ module.exports = {
   updateUsername, 
   updateEmail,
   updateProfileImageUrl,
-  checkEmailExists
+  checkEmailExists,
+  getUserDetailsByEmails,
+  getUserRole
 };

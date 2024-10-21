@@ -58,7 +58,7 @@ const createNote = async (req, res) => {
       ...noteResult.rows[0],
       folderName,
       subjectName,
-      created_at: noteResult.rows[0].created_at.toISOString() // Ensure the date is in ISO format
+      created_at: noteResult.rows[0].created_at.toISOString()
     });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -107,21 +107,54 @@ const deleteNote = async (req, res) => {
   const userId = req.user.id;
 
   try {
-    // Check if the user is the owner or linked to the note
-    const result = await pool.query(
-      `DELETE FROM notes 
-       WHERE id = $1 AND (owner_id = $2 OR id IN (
-         SELECT note_id FROM user_notes WHERE user_id = $2
-       )) 
-       RETURNING *`,
-      [id, userId]
+    // Check if the user is the owner of the note
+    const noteResult = await pool.query(
+      `SELECT owner_id FROM notes WHERE id = $1`,
+      [id]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'Note not found or you do not have permission to delete this note' });
+    if (noteResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Note not found' });
     }
 
-    res.json({ message: 'Note deleted successfully' });
+    const ownerId = noteResult.rows[0].owner_id;
+
+    if (userId === ownerId) {
+      // User is the owner, delete the note
+      const result = await pool.query(
+        `DELETE FROM notes 
+         WHERE id = $1 
+         RETURNING *`,
+        [id]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ message: 'Note not found or could not be deleted' });
+      }
+
+      // Delete all records in user_notes for this note
+      await pool.query(
+        `DELETE FROM user_notes 
+         WHERE note_id = $1`,
+        [id]
+      );
+
+      return res.json({ message: 'Note deleted successfully' });
+    } else {
+      // User is not the owner, delete only from user_notes
+      const result = await pool.query(
+        `DELETE FROM user_notes 
+         WHERE note_id = $1 AND user_id = $2 
+         RETURNING *`,
+        [id, userId]
+      );
+
+      if (result.rowCount === 0) {
+        return res.status(404).json({ message: 'Note not found or you do not have permission to delete this note' });
+      }
+
+      return res.json({ message: 'User access to note deleted successfully' });
+    }
   } catch (err) {
     console.error('Error deleting note:', err);
     res.status(500).json({ message: 'Error deleting note' });
@@ -136,10 +169,32 @@ const getAllNotes = async (req, res) => {
       `SELECT DISTINCT notes.*, folders.name AS folder_name, subjects.name AS subject_name 
        FROM notes 
        LEFT JOIN folders ON notes.folder_id = folders.id 
-       LEFT JOIN subjects ON notes.subject_id = subjects.id 
-       WHERE notes.owner_id = $1 OR (notes.id IN (
-         SELECT note_id FROM user_notes WHERE user_id = $1 AND answered_invite = true
-       ))
+       LEFT JOIN subjects ON notes.subject_id = subjects.id
+       WHERE (notes.owner_id = $1)
+       ORDER BY notes.created_at DESC`,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.json({ message: 'No notes found', notes: [] });
+    }
+
+    res.json({ notes: result.rows });
+  } catch (err) {
+    console.error('Error fetching notes:', err);
+    res.status(500).json({ message: 'Error fetching notes' });
+  }
+};
+
+const getSharedNotes = async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const result = await pool.query(
+      `SELECT DISTINCT notes.*
+       FROM user_notes
+       LEFT JOIN notes ON notes.id = user_notes.note_id 
+       WHERE (user_notes.user_id = $1 AND user_notes.answered_invite = true)
        ORDER BY notes.created_at DESC`,
       [userId]
     );
@@ -208,4 +263,4 @@ const getNote = async (req, res) => {
   }
 };
 
-module.exports = { createNote, editNote, deleteNote, getAllNotes, updateNoteColor, getNote };
+module.exports = { createNote, editNote, deleteNote, getAllNotes, updateNoteColor, getNote, getSharedNotes };
