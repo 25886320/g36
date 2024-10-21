@@ -2,7 +2,7 @@ import axios from 'axios';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../firebase/config';
 
-const API_URL = 'https://g36.onrender.com';
+const API_URL = 'http://localhost:8000';
 
 const apiClient = axios.create({
     baseURL: API_URL,

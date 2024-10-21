@@ -10,10 +10,7 @@ const WebSocket = require('ws');
 const app = express();
 
 // Middleware
-app.use(cors({
-  origin: ['http://localhost:8080', 'https://g36.onrender.com'],
-  credentials: true,
-}));
+app.use(cors());
 app.use(express.json());
 const authRoutes = require('./routes/auth');
 const subjectRoutes = require('./routes/subjects');
